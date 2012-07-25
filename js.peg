@@ -1,0 +1,36 @@
+
+statements=statement+
+
+statement=
+
+var_decl=name
+	/ name "=" literal
+
+var_form="var " var_decl+
+
+for_form="for(){ }"
+foreach_form="for(var ___ in ___){ }"
+
+literal=object_literal / function_literal / array_literal / scalar_literal
+
+
+array_literal="[" literal* "]"
+
+object_literal_entry_pair=scalar_literal ":" literal
+
+object_literal="{" object_literal_entry_pair* "}"
+
+function_literal="function(){}"
+
+
+number_literal="1"
+
+string_literal='"' '"'
+
+scalar_literal=string_literal / number_literal
+
+
+ws=[ \s\w\t]
+validchars=
+validnums=
+
