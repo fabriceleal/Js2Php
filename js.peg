@@ -1,6 +1,6 @@
 
 statements=
-		s:statement*
+		s:statement* ws_nl*
 		{ return { tag: "statement_collection", value:s }}
 
 statement=
@@ -18,7 +18,7 @@ expression=
 	/	c:clean_expression ws_nl*
 		{ return c; }
 
-clean_expression=var_set / comma_operator / offsetable / literal
+clean_expression=var_set / /*comma_operator /*/ offsetable / literal
 
 // Variable declaration / Value setting
 
@@ -51,7 +51,12 @@ offsetable=
 
 // Comma operator 
 
-comma_operator=
+// TODO
+//comma_operator=
+
+// TODO
+//return_operator=
+
 
 // Literals
 
@@ -89,7 +94,11 @@ object_literal=
 
 //// Function literal
 
-function_literal="function(){}"
+function_literal=
+		"function" ws_nl* name:id ws_nl* "(" ws_nl* "){" 
+			ws_nl* body:statements 
+		"}"
+		{ return { tag: "function_literal", name:name, args:[], body:body } }
 
 //// All literal that can be the key in an Object
 scalar_literal=string_literal / number_literal / id
