@@ -1,36 +1,123 @@
 
-statements=statement+
+statements=
+		s:statement*
+		{ return { tag: "statement_collection", value:s }}
 
 statement=
+		var_form_right_pad
+	/	var_set_right_pad
+	/ 	literal_right_pad
+	///	expression_right_pad
 
-var_decl=name
-	/ name "=" literal
+expression_right_pad= /*Anything that can be put inside parenthesis (it might not be inside parenthesis) */
+		"(" ws_nl* clean_expression ")" ws_nl* right_pad
+	/	clean_expression right_pad
 
-var_form="var " var_decl+
+clean_expression=var_set / literal
 
-for_form="for(){ }"
-foreach_form="for(var ___ in ___){ }"
+// Variable declaration / Value setting
 
-literal=object_literal / function_literal / array_literal / scalar_literal
+declarables=id /* var_name */
+assignables=id /* var_name, array/object offset, object member */
+
+var_set_right_pad=v:var_set right_pad
+		{ return v; }
+
+var_form_right_pad="var " ws_nl* head:var_decl tail:commas_var_decl* right_pad
+		{ return { tag: "let_collection", value:[head].concat(tail) } }
+
+commas_var_decl="," ws_nl* v:var_decl ws_nl*
+		{ return v; }
+
+var_decl=
+	 	var_name:declarables ws+ "=" ws+ var_value:clean_expression ws_nl*
+		{ return { tag: "let", id: var_name, value: var_value } }
+	/	var_name:declarables ws_nl*
+		{ return { tag: "let", id: var_name, value: undefined } }
+
+var_set=
+		var_name:assignables ws+ "=" ws+ var_value:clean_expression ws_nl*
+		{ return { tag: "let", id: var_name, value: var_value } }
+
+// Literals
+
+literal_right_pad = l:clean_literal right_pad
+		{ return l; }
+
+literal=l:clean_literal ws_nl*
+		{ return l; }
+
+clean_literal=object_literal / function_literal / array_literal / scalar_literal
+
+//// Array literal
+comma_literal = "," ws_nl* v:literal ws_nl*
+		{ return v; }
+
+array_literal=
+		"[" ws_nl* "]"
+		{ return { tag:"array_literal", value:null} }
+	/	"[" ws_nl* head:literal tail:comma_literal* ws_nl* "]"
+		{ return { tag:"array_literal", value:[head].concat(tail) }}
 
 
-array_literal="[" literal* "]"
+//// Object literal
+comma_object_literal_entry_pair = "," ws_nl* v:object_literal_entry_pair ws_nl*
+		{ return v; }
 
-object_literal_entry_pair=scalar_literal ":" literal
+object_literal_entry_pair=key:scalar_literal ws_nl* ":" ws_nl* value:literal
+		{ return { tag: "object_entry", key:key, value:value }}
 
-object_literal="{" object_literal_entry_pair* "}"
+object_literal=
+		"{" ws_nl* "}"
+		{ return { tag:"object_literal", value:null} }
+	/	"{" ws_nl* head:object_literal_entry_pair tail:comma_object_literal_entry_pair* ws_nl* "}"
+		{ return { tag:"object_literal", value:[head].concat(tail) }}
+
+//// Function literal
 
 function_literal="function(){}"
 
+//// All literal that can be the key in an Object
+scalar_literal=string_literal / number_literal / id
 
-number_literal="1"
+//// Number literal - simple for now; only decimal notation
+number_literal=
+		left:valid_num+ "."  right:valid_num+
+		{ return { tag:"number_literal", value:new Number(left + '.' + right)}; }
+	/	integer:valid_num+
+		{ return { tag:"number_literal", value:new Number(integer)}; }
 
-string_literal='"' '"'
+string_literal='"' s:valid_str_char* '"'
+		{ return { tag: "string_literal", value:s.join('') }; }
 
-scalar_literal=string_literal / number_literal
+//// A var reference; can be also used as a "symbol", for the key in an Object
+id = h:valid_1st_idchar t:valid_idchar*
+		{ return { tag:"id", name:h + t.join('')}}
 
+// BASE 
 
-ws=[ \s\w\t]
-validchars=
-validnums=
+right_pad=
+		eos? ws_nl*
+
+ws_nl=
+		ws 
+	/ 	nl
+
+nl=
+		"\r\n" 
+	/  "\r" 
+	/  "\n"
+
+ws=[ \w\t]
+
+valid_str_char=(!"\"" c:.)
+ 	{ return c; }
+
+valid_num=[0-9]
+
+valid_1st_idchar=[a-zA-Z_$]
+
+valid_idchar=[0-9] / valid_1st_idchar
+
+eos=";"
 

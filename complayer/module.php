@@ -6,9 +6,14 @@
 
 	$module = (object) array();
 	$require = $module->require = function($mod_name, $__){
+		static cache = (object) array();
+
 		// TODO Put this in another file! :(
 		// TODO Cache results
-		return eval(file_get_contents( $mod_name ));
+
+		$contents = file_get_contents( $mod_name );
+
+		return eval( $contents );
 	};
 	$module->id = " This is id module 1 ";
 	$module->filename = " This is filename module 1 ";

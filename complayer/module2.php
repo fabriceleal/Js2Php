@@ -1,3 +1,8 @@
+<?
+
+?>
+This is a module. How do u think u are?
+<?
 /*
 	ATTENTION: This is not a valid php file! Block execution of this file!
 */
@@ -38,3 +43,5 @@ return $exports;
 /*
 	End of module2
 */
+
+?>
