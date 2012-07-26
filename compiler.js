@@ -54,6 +54,10 @@
 	var compile = function(isTopLevel){
 		return function(tree){
 			switch(tree.tag){
+				case "parenthesis":
+					return "(" + compile(false)(tree.expression) + ")" + (isTopLevel? ';':'');
+				case "offsetable":
+					return compileToString(isTopLevel)(compile(false)(tree.id) + '[' + compile(false)(tree.offset) + ']');
 				case "object_entry":
 					// no toplevel for this one!!!
 					return compileToString(false)('"' + tree.key.name + '"') + ' => ' + compile(false)(tree.value);

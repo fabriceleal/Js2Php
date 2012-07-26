@@ -5,20 +5,26 @@ statements=
 
 statement=
 		var_form_right_pad
-	/	var_set_right_pad
-	/ 	literal_right_pad
-	///	expression_right_pad
+	/	expression_right_pad
 
-expression_right_pad= /*Anything that can be put inside parenthesis (it might not be inside parenthesis) */
-		"(" ws_nl* clean_expression ")" ws_nl* right_pad
-	/	clean_expression right_pad
 
-clean_expression=var_set / literal
+expression_right_pad = e:expression right_pad
+		{ return e; }
+
+/*Anything that can be put inside parenthesis (it might not be inside parenthesis) */
+expression= 
+		"(" ws_nl* c:clean_expression ")" ws_nl*
+		{ return { tag: "parenthesis", expression: c }; }
+	/	c:clean_expression ws_nl*
+		{ return c; }
+
+clean_expression=var_set / comma_operator / offsetable / literal
 
 // Variable declaration / Value setting
 
 declarables=id /* var_name */
-assignables=id /* var_name, array/object offset, object member */
+
+assignables=offsetable / id /* var_name, array/object offset, object member */
 
 var_set_right_pad=v:var_set right_pad
 		{ return v; }
@@ -30,14 +36,22 @@ commas_var_decl="," ws_nl* v:var_decl ws_nl*
 		{ return v; }
 
 var_decl=
-	 	var_name:declarables ws+ "=" ws+ var_value:clean_expression ws_nl*
+	 	var_name:declarables ws_nl* "=" ws_nl* var_value:expression
 		{ return { tag: "let", id: var_name, value: var_value } }
 	/	var_name:declarables ws_nl*
 		{ return { tag: "let", id: var_name, value: undefined } }
 
 var_set=
-		var_name:assignables ws+ "=" ws+ var_value:clean_expression ws_nl*
+		var_name:assignables ws_nl* "=" ws_nl* var_value:expression
 		{ return { tag: "let", id: var_name, value: var_value } }
+
+offsetable=
+		container:id ws_nl* "[" ws_nl* offset:expression "]" ws_nl*
+		{ return { tag: "offsetable", id:container, offset:offset} }
+
+// Comma operator 
+
+comma_operator=
 
 // Literals
 
@@ -55,7 +69,7 @@ comma_literal = "," ws_nl* v:literal ws_nl*
 
 array_literal=
 		"[" ws_nl* "]"
-		{ return { tag:"array_literal", value:null} }
+		{ return { tag:"array_literal", value:[]} }
 	/	"[" ws_nl* head:literal tail:comma_literal* ws_nl* "]"
 		{ return { tag:"array_literal", value:[head].concat(tail) }}
 
@@ -69,7 +83,7 @@ object_literal_entry_pair=key:scalar_literal ws_nl* ":" ws_nl* value:literal
 
 object_literal=
 		"{" ws_nl* "}"
-		{ return { tag:"object_literal", value:null} }
+		{ return { tag:"object_literal", value:[]} }
 	/	"{" ws_nl* head:object_literal_entry_pair tail:comma_object_literal_entry_pair* ws_nl* "}"
 		{ return { tag:"object_literal", value:[head].concat(tail) }}
 
