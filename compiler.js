@@ -40,7 +40,10 @@
 		var ret = '';
 		ret += '<?\n';
 
+		// Necessary includes
 		ret += 'require_once "JsObject.php"; \n';
+
+		// File's code
 		ret += compile(true)(tree);
 
 		ret += '\n?>';
