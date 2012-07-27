@@ -6,10 +6,19 @@ class JsFunction {
 		// TODO Check if is function!
 		$this->fun = $fun;
 		$this->arguments = null;
+		$this->defaultThis = $this;
 	}
 	
 	function call($newThis, $args_as_var_args = null){
-		return call_user_func_array($this->fun, (array( $newThis ) + array_slice(func_get_args(), 0)) );
+		return call_user_func_array($this->fun, (array( is_null($newThis) ? $this->defaultThis : $newThis ) + array_slice(func_get_args(), 0)) );
+	}
+
+	function setThis( $newThis ){
+		$this->defaultThis = $newThis;
+	}
+
+	function getThis(){
+		return $this->defaultThis;
 	}
 
 	/*function apply($newThis, $args_as_arr){

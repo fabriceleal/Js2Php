@@ -38,8 +38,11 @@
 
 	var compileFunction = function(isTopLevel){
 		return function(tree){
-			var ret = 'new JsFunction(function (' ;
-			ret += tree.args.map(function(e){ return compile(false)(e) + ' = undefined' }).join(',');
+			var ret = 'new JsFunction(function ( $___this ' ;
+			if(tree.args.length > 0){
+				ret += ', ';
+				ret += tree.args.map(function(e){ return compile(false)(e) + ' = null' }).join(', ');
+			}
 			ret += ')' 
 			if(tree.hasOwnProperty('captured') && tree.captured !== null && tree.captured.length > 0){
 				ret += ' use (' + tree.captured.map(function(e){ return '$'+ e; }).join(', ') + ')';
@@ -76,14 +79,25 @@
 	var compile = function(isTopLevel){
 		return function(tree){
 			switch(tree.tag){
+				case "fun_app":
+					var ret = compile(false)(tree.fun) + "->call(null";  
+					if(tree.args.length > 0){
+						ret += ', ' + tree.args.map(compile(false)).join(', ');
+					}
+					ret += ")" + (isTopLevel?';':'');
+					return ret;	
 				case "return":
 					return "return " + compile(false)(tree.value) + ";";
 				case "function_literal":
 					return compileFunction(false)(tree);					
 				case "parenthesis":
 					return "(" + compile(false)(tree.expression) + ")" + (isTopLevel? ';':'');
+				case "offsetable_accessor_as_arr":
+					return "[" + compile(false)(tree.offset) + "]";
+				case "offsetable_accessor_as_obj":
+					return "->" + compile(false)(tree.offset);
 				case "offsetable":
-					return compileToString(isTopLevel)(compile(false)(tree.id) + '[' + compile(false)(tree.offset) + ']');
+					return compileToString(isTopLevel)(compile(false)(tree.id) + tree.offset.map(compile(false)).join('') );
 				case "object_entry":
 					// no toplevel for this one!!!
 					return compileToString(false)('"' + tree.key.name + '"') + ' => ' + compile(false)(tree.value);
@@ -99,9 +113,15 @@
 					return tree.value.map(compileLet(false)).join(',') + ';';
 				case "let":
 					return compileLet(isTopLevel)(tree); 
-				case "id": case "iddeclr":
+				case "id": case "iddeclr": 
 					// no toplevel for this one!
+
+					if(tree.name === 'this') tree.name = '___this';
+
 					return "$" + compileToString(false)(tree.name.replace('$', '_'));
+				case "property_name":
+					// no toplevel for this one!					
+					return compileToString(false)(tree.name.replace('$', '_'));
 				case "number_literal":
 					return compileToString(isTopLevel)(tree.value.toString());
 				case "string_literal":

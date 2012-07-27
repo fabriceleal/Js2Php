@@ -9,6 +9,9 @@
 	  function __construct($members = array()) {
 		 foreach ($members as $name => $value) {
 		   $this->$name = $value;
+			if($value instanceof JsFunction){
+				$value->setThis($this);
+			}
 		 }
 	  }
 

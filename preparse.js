@@ -27,7 +27,7 @@
 	var preParse = function(tree){
 		recursiveFind(tree, 'function_literal').forEach(function(item){
 			// Assume *all* ids not declared inside as captured
-			var locals = [], captured = [];
+			var locals = [ 'this' ], captured = [];
 
 			item.body.value.forEach(function(instruction){
 				// 1st look for refs. If they are not declared in locals, push to all_refs

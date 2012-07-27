@@ -14,17 +14,20 @@ expression_right_pad = e:expression right_pad
 
 /*Anything that can be put inside parenthesis (it might not be inside parenthesis) */
 expression= 
-		"(" ws_nl* c:clean_expression ")" ws_nl*
-		{ return { tag: "parenthesis", expression: c }; }
-	/	c:clean_expression ws_nl*
+		c:clean_expression ws_nl*
 		{ return c; }
+	/	"(" ws_nl* c:clean_expression ")" ws_nl*
+		{ return { tag: "parenthesis", expression: c }; }
 
-clean_expression=var_set / /*comma_operator /*/ offsetable / literal
+
+clean_expression=var_set / literal / offsetable / function_application / id
+
+function_application=f:id "(" ")" ws_nl*
+		{ return { tag: "fun_app", fun:f, args:[] }}
 
 // Variable declaration / Value setting
 
 declarables=var_name /* var_name */
-
 assignables=offsetable / id /* var_name, array/object offset, object member */
 
 var_set_right_pad=v:var_set right_pad
@@ -50,8 +53,14 @@ var_set=
 // FIXME support this: a[0][1]
 //	FIXME support this: a.getasd
 // FIXME support this: a.getasd.setqwe()
+offsetable_accessor=
+		"[" ws_nl* o:expression "]" ws_nl*
+		{ return { tag: "offsetable_accessor_as_arr", offset:o }; }
+	/	"." ws_nl* o:property_name ws_nl*
+		{ return { tag: "offsetable_accessor_as_obj", offset:o }; }
+
 offsetable=
-		container:id ws_nl* "[" ws_nl* offset:expression "]" ws_nl*
+		container:id ws_nl* offset:offsetable_accessor+
 		{ return { tag: "offsetable", id:container, offset:offset} }
 
 // Comma operator 
@@ -74,7 +83,7 @@ literal_right_pad = l:clean_literal right_pad
 literal=l:clean_literal ws_nl*
 		{ return l; }
 
-clean_literal=object_literal / function_literal / array_literal / scalar_literal
+clean_literal=function_literal / object_literal / array_literal / string_literal / number_literal
 
 //// Array literal
 comma_literal = "," ws_nl* v:literal ws_nl*
@@ -91,7 +100,9 @@ array_literal=
 comma_object_literal_entry_pair = "," ws_nl* v:object_literal_entry_pair ws_nl*
 		{ return v; }
 
-object_literal_entry_pair=key:scalar_literal ws_nl* ":" ws_nl* value:literal
+object_literal_entry_pair_valid_key = string_literal / number_literal / id
+
+object_literal_entry_pair=key:object_literal_entry_pair_valid_key ws_nl* ":" ws_nl* value:literal
 		{ return { tag: "object_entry", key:key, value:value }}
 
 object_literal=
@@ -116,9 +127,6 @@ function_literal=
 		"}"
 		{ return { tag: "function_literal", name:name, args:a, body:body } }
 
-//// All literal that can be the key in an Object
-scalar_literal=string_literal / number_literal / id
-
 //// Number literal - simple for now; only decimal notation
 number_literal=
 		left:valid_num+ "."  right:valid_num+
@@ -138,6 +146,9 @@ id = h:valid_1st_idchar t:valid_idchar*
 
 var_name = h:valid_1st_idchar t:valid_idchar*
 		{ return { tag:"iddeclr", name:h + t.join('')}}
+
+property_name = h:valid_1st_idchar t:valid_idchar*
+		{ return { tag:"property_name", name:h + t.join('')}}
 
 // BASE 
 
