@@ -49,6 +49,8 @@ exports.parser = (function(){
         "var_decl": parse_var_decl,
         "var_set": parse_var_set,
         "offsetable": parse_offsetable,
+        "return_operator_right_pad": parse_return_operator_right_pad,
+        "return_operator": parse_return_operator,
         "literal_right_pad": parse_literal_right_pad,
         "literal": parse_literal,
         "clean_literal": parse_clean_literal,
@@ -57,11 +59,14 @@ exports.parser = (function(){
         "comma_object_literal_entry_pair": parse_comma_object_literal_entry_pair,
         "object_literal_entry_pair": parse_object_literal_entry_pair,
         "object_literal": parse_object_literal,
+        "function_comma_arg": parse_function_comma_arg,
+        "function_list_args": parse_function_list_args,
         "function_literal": parse_function_literal,
         "scalar_literal": parse_scalar_literal,
         "number_literal": parse_number_literal,
         "string_literal": parse_string_literal,
         "id": parse_id,
+        "var_name": parse_var_name,
         "right_pad": parse_right_pad,
         "ws_nl": parse_ws_nl,
         "nl": parse_nl,
@@ -169,7 +174,10 @@ exports.parser = (function(){
         
         result0 = parse_var_form_right_pad();
         if (result0 === null) {
-          result0 = parse_expression_right_pad();
+          result0 = parse_return_operator_right_pad();
+          if (result0 === null) {
+            result0 = parse_expression_right_pad();
+          }
         }
         return result0;
       }
@@ -481,7 +489,7 @@ exports.parser = (function(){
         
         pos0 = pos;
         pos1 = pos;
-        result0 = parse_id();
+        result0 = parse_var_name();
         if (result0 !== null) {
           result1 = [];
           result2 = parse_ws_nl();
@@ -539,7 +547,7 @@ exports.parser = (function(){
         if (result0 === null) {
           pos0 = pos;
           pos1 = pos;
-          result0 = parse_id();
+          result0 = parse_var_name();
           if (result0 !== null) {
             result1 = [];
             result2 = parse_ws_nl();
@@ -713,6 +721,82 @@ exports.parser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, container, offset) { return { tag: "offsetable", id:container, offset:offset} })(pos0, result0[0], result0[4]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_return_operator_right_pad() {
+        var result0, result1;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_return_operator();
+        if (result0 !== null) {
+          result1 = parse_right_pad();
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, r) { return r; })(pos0, result0[0]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_return_operator() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        if (input.substr(pos, 6) === "return") {
+          result0 = "return";
+          pos += 6;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\"return\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_ws_nl();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_ws_nl();
+          }
+          if (result1 !== null) {
+            result2 = parse_expression();
+            result2 = result2 !== null ? result2 : "";
+            if (result2 !== null) {
+              result0 = [result0, result1, result2];
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, e) { return { tag:"return", value:e}; })(pos0, result0[2]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -1243,6 +1327,112 @@ exports.parser = (function(){
         return result0;
       }
       
+      function parse_function_comma_arg() {
+        var result0, result1, result2, result3, result4;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        if (input.charCodeAt(pos) === 44) {
+          result0 = ",";
+          pos++;
+        } else {
+          result0 = null;
+          if (reportFailures === 0) {
+            matchFailed("\",\"");
+          }
+        }
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_ws_nl();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_ws_nl();
+          }
+          if (result1 !== null) {
+            result2 = parse_id();
+            if (result2 !== null) {
+              result3 = [];
+              result4 = parse_ws_nl();
+              while (result4 !== null) {
+                result3.push(result4);
+                result4 = parse_ws_nl();
+              }
+              if (result3 !== null) {
+                result0 = [result0, result1, result2, result3];
+              } else {
+                result0 = null;
+                pos = pos1;
+              }
+            } else {
+              result0 = null;
+              pos = pos1;
+            }
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, e) { return e; })(pos0, result0[2]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_function_list_args() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_id();
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_function_comma_arg();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_function_comma_arg();
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, h, t) { return [h].concat(t) })(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        if (result0 === null) {
+          pos0 = pos;
+          result0 = [];
+          result1 = parse_ws_nl();
+          while (result1 !== null) {
+            result0.push(result1);
+            result1 = parse_ws_nl();
+          }
+          if (result0 !== null) {
+            result0 = (function(offset) { return []; })(pos0);
+          }
+          if (result0 === null) {
+            pos = pos0;
+          }
+        }
+        return result0;
+      }
+      
       function parse_function_literal() {
         var result0, result1, result2, result3, result4, result5, result6, result7, result8, result9;
         var pos0, pos1;
@@ -1267,6 +1457,7 @@ exports.parser = (function(){
           }
           if (result1 !== null) {
             result2 = parse_id();
+            result2 = result2 !== null ? result2 : "";
             if (result2 !== null) {
               result3 = [];
               result4 = parse_ws_nl();
@@ -1285,12 +1476,7 @@ exports.parser = (function(){
                   }
                 }
                 if (result4 !== null) {
-                  result5 = [];
-                  result6 = parse_ws_nl();
-                  while (result6 !== null) {
-                    result5.push(result6);
-                    result6 = parse_ws_nl();
-                  }
+                  result5 = parse_function_list_args();
                   if (result5 !== null) {
                     if (input.substr(pos, 2) === "){") {
                       result6 = "){";
@@ -1363,7 +1549,7 @@ exports.parser = (function(){
           pos = pos1;
         }
         if (result0 !== null) {
-          result0 = (function(offset, name, body) { return { tag: "function_literal", name:name, args:[], body:body } })(pos0, result0[2], result0[8]);
+          result0 = (function(offset, name, a, body) { return { tag: "function_literal", name:name, args:a, body:body } })(pos0, result0[2], result0[5], result0[8]);
         }
         if (result0 === null) {
           pos = pos0;
@@ -1544,6 +1730,39 @@ exports.parser = (function(){
         }
         if (result0 !== null) {
           result0 = (function(offset, h, t) { return { tag:"id", name:h + t.join('')}})(pos0, result0[0], result0[1]);
+        }
+        if (result0 === null) {
+          pos = pos0;
+        }
+        return result0;
+      }
+      
+      function parse_var_name() {
+        var result0, result1, result2;
+        var pos0, pos1;
+        
+        pos0 = pos;
+        pos1 = pos;
+        result0 = parse_valid_1st_idchar();
+        if (result0 !== null) {
+          result1 = [];
+          result2 = parse_valid_idchar();
+          while (result2 !== null) {
+            result1.push(result2);
+            result2 = parse_valid_idchar();
+          }
+          if (result1 !== null) {
+            result0 = [result0, result1];
+          } else {
+            result0 = null;
+            pos = pos1;
+          }
+        } else {
+          result0 = null;
+          pos = pos1;
+        }
+        if (result0 !== null) {
+          result0 = (function(offset, h, t) { return { tag:"iddeclr", name:h + t.join('')}})(pos0, result0[0], result0[1]);
         }
         if (result0 === null) {
           pos = pos0;

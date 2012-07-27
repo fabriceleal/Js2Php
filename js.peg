@@ -5,6 +5,7 @@ statements=
 
 statement=
 		var_form_right_pad
+	/ 	return_operator_right_pad
 	/	expression_right_pad
 
 
@@ -22,7 +23,7 @@ clean_expression=var_set / /*comma_operator /*/ offsetable / literal
 
 // Variable declaration / Value setting
 
-declarables=id /* var_name */
+declarables=var_name /* var_name */
 
 assignables=offsetable / id /* var_name, array/object offset, object member */
 
@@ -35,6 +36,7 @@ var_form_right_pad="var " ws_nl* head:var_decl tail:commas_var_decl* right_pad
 commas_var_decl="," ws_nl* v:var_decl ws_nl*
 		{ return v; }
 
+// FIXME var a = b = c = 1 NOT SUPPORTED!!!
 var_decl=
 	 	var_name:declarables ws_nl* "=" ws_nl* var_value:expression
 		{ return { tag: "let", id: var_name, value: var_value } }
@@ -54,8 +56,11 @@ offsetable=
 // TODO
 //comma_operator=
 
-// TODO
-//return_operator=
+return_operator_right_pad=r:return_operator right_pad
+		{ return r; }
+
+return_operator="return" ws_nl* e:expression?
+		{ return { tag:"return", value:e}; }
 
 
 // Literals
@@ -94,11 +99,19 @@ object_literal=
 
 //// Function literal
 
+function_comma_arg= "," ws_nl* e:id ws_nl*
+		{ return e; }
+
+function_list_args=h:id t:function_comma_arg*
+		{ return [h].concat(t) }
+		/ ws_nl* 
+		{ return []; }
+
 function_literal=
-		"function" ws_nl* name:id ws_nl* "(" ws_nl* "){" 
+		"function" ws_nl* name:id? ws_nl* "(" a:function_list_args "){" 
 			ws_nl* body:statements 
 		"}"
-		{ return { tag: "function_literal", name:name, args:[], body:body } }
+		{ return { tag: "function_literal", name:name, args:a, body:body } }
 
 //// All literal that can be the key in an Object
 scalar_literal=string_literal / number_literal / id
@@ -114,8 +127,14 @@ string_literal='"' s:valid_str_char* '"'
 		{ return { tag: "string_literal", value:s.join('') }; }
 
 //// A var reference; can be also used as a "symbol", for the key in an Object
+
+// var reference and declaration are separated for processing reasons...
+
 id = h:valid_1st_idchar t:valid_idchar*
 		{ return { tag:"id", name:h + t.join('')}}
+
+var_name = h:valid_1st_idchar t:valid_idchar*
+		{ return { tag:"iddeclr", name:h + t.join('')}}
 
 // BASE 
 

@@ -36,12 +36,34 @@
 		};
 	};
 
+	var compileFunction = function(isTopLevel){
+		return function(tree){
+			var ret = 'new JsFunction(function (' ;
+			ret += tree.args.map(function(e){ return compile(false)(e) + ' = undefined' }).join(',');
+			ret += ')' 
+			if(tree.hasOwnProperty('captured') && tree.captured !== null && tree.captured.length > 0){
+				ret += ' use (' + tree.captured.map(function(e){ return '$'+ e; }).join(', ') + ')';
+			}
+			ret += '{';
+			ret += compile(true)(tree.body);
+			ret += '})';
+			return ret + (isTopLevel?';':'');
+		};
+	};
+
 	var compileToPhp = function(tree){
+		with(require('./preparse.js')){
+			preParse(tree);
+		}
+
 		var ret = '';
 		ret += '<?\n';
 
 		// Necessary includes
-		ret += 'require_once "JsObject.php"; \n';
+		ret += ["JsObject.php", "JsFunction.php"].
+				map(function(i){ return 'require_once "' + i + '";\n'}).
+				join('');
+		//--
 
 		// File's code
 		ret += compile(true)(tree);
@@ -54,6 +76,10 @@
 	var compile = function(isTopLevel){
 		return function(tree){
 			switch(tree.tag){
+				case "return":
+					return "return " + compile(false)(tree.value) + ";";
+				case "function_literal":
+					return compileFunction(false)(tree);					
 				case "parenthesis":
 					return "(" + compile(false)(tree.expression) + ")" + (isTopLevel? ';':'');
 				case "offsetable":
@@ -73,7 +99,7 @@
 					return tree.value.map(compileLet(false)).join(',') + ';';
 				case "let":
 					return compileLet(isTopLevel)(tree); 
-				case "id":
+				case "id": case "iddeclr":
 					// no toplevel for this one!
 					return "$" + compileToString(false)(tree.name.replace('$', '_'));
 				case "number_literal":
