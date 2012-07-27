@@ -138,6 +138,7 @@ valid_str_char=(!"\"" c:.)
 
 valid_num=[0-9]
 
+// FIXME not exhaustive, for now ...
 valid_1st_idchar=[a-zA-Z_$]
 
 valid_idchar=[0-9] / valid_1st_idchar
