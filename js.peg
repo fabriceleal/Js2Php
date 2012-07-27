@@ -47,6 +47,9 @@ var_set=
 		var_name:assignables ws_nl* "=" ws_nl* var_value:expression
 		{ return { tag: "let", id: var_name, value: var_value } }
 
+// FIXME support this: a[0][1]
+//	FIXME support this: a.getasd
+// FIXME support this: a.getasd.setqwe()
 offsetable=
 		container:id ws_nl* "[" ws_nl* offset:expression "]" ws_nl*
 		{ return { tag: "offsetable", id:container, offset:offset} }
