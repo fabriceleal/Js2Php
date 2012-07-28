@@ -5,8 +5,8 @@ statements=
 
 statement=
 		var_form_right_pad
-	/ 	return_operator_right_pad
 	/	expression_right_pad
+	/ 	return_operator_right_pad
 
 
 expression_right_pad = e:expression right_pad
@@ -16,14 +16,22 @@ expression_right_pad = e:expression right_pad
 expression= 
 		c:clean_expression ws_nl*
 		{ return c; }
-	/	"(" ws_nl* c:clean_expression ")" ws_nl*
-		{ return { tag: "parenthesis", expression: c }; }
+/*	/	"(" ws_nl* c:clean_expression ")" ws_nl*
+		{ return { tag: "parenthesis", expression: c }; }*/
 
 
-clean_expression=var_set / literal / offsetable / function_application / id
+clean_expression=var_set / comparative / literal / offsetable / function_application / id
 
-function_application=f:id "(" ")" ws_nl*
-		{ return { tag: "fun_app", fun:f, args:[] }}
+
+function_application_expression_list_comma_item="," ws_nl* e:expression ws_nl*
+		{ return e; }
+function_application_expression_list=h:expression ws_nl* t:function_application_expression_list_comma_item*
+		{ return [h].concat(t); }
+
+// FIXME Curryed example f()()()
+function_application=f:id "(" ws_nl* a:function_application_expression_list? ")" ws_nl*
+		{ return { tag: "fun_app", fun:f, args:a }}
+
 
 // Variable declaration / Value setting
 
@@ -74,6 +82,27 @@ return_operator_right_pad=r:return_operator right_pad
 return_operator="return" ws_nl* e:expression?
 		{ return { tag:"return", value:e}; }
 
+
+comp_op = "<=" / ">=" / "!=" / "==" / "<" / ">" / "<==" / ">==" / "!==" / "==="
+
+// Arithmetics
+comparative=
+		left:add ws_nl* op:comp_op ws_nl* right:add ws_nl* 
+		{ return { tag:"infix", operator:op, left:left, right:right } }
+
+add=
+		left:mult ws_nl* op:"+" ws_nl* right:add ws_nl* 
+		{ return { tag:"infix", operator:op, left:left, right:right } }
+
+mult=
+		left:primitive ws_nl* op:[\*\/] ws_nl* right:add ws_nl* 
+		{ return { tag:"infix", operator:op, left:left, right:right } }
+
+primitive=
+		n:number_literal ws_nl* 
+		{ return n; }
+	/	"(" ws_nl* a:add ")" ws_nl*
+		{ return a; }
 
 // Literals
 
@@ -130,9 +159,9 @@ function_literal=
 //// Number literal - simple for now; only decimal notation
 number_literal=
 		left:valid_num+ "."  right:valid_num+
-		{ return { tag:"number_literal", value:new Number(left + '.' + right)}; }
+		{ return { tag:"number_literal", value:new Number(left.join('') + '.' + right.join(''))}; }
 	/	integer:valid_num+
-		{ return { tag:"number_literal", value:new Number(integer)}; }
+		{ return { tag:"number_literal", value:new Number(integer.join(''))}; }
 
 string_literal='"' s:valid_str_char* '"'
 		{ return { tag: "string_literal", value:s.join('') }; }

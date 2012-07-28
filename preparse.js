@@ -6,12 +6,17 @@
 
 (function(){
 
-	var recursiveFind = function(tree, tag){
+	var recursiveFind = function(tree, tag, scopeAware){
 		var ret = [];
+
+		if(scopeAware === undefined) scopeAware = false;
 
 		if((tree instanceof Array) || (tree instanceof Object)){
 			//console.log('is_array');			
 			for(var k in tree){
+
+				if(scopeAware && tree[k].tag === 'function_literal') continue;
+
 				ret = ret.concat(recursiveFind(tree[k], tag));
 			};			
 		}
@@ -29,19 +34,31 @@
 			// Assume *all* ids not declared inside as captured
 			var locals = [ 'this' ], captured = [];
 
+			// Add current function's args to locals
+			item.args.forEach(function(arg){
+				locals.push(arg.name);
+			});
+
+			// Parse each function instruction
 			item.body.value.forEach(function(instruction){
+
 				// 1st look for refs. If they are not declared in locals, push to all_refs
 				// TODO Multiple declaration var a = b = c = 1 will break here. FIX the grammar.
-				recursiveFind(instruction, 'id').forEach(function(ref){
+				// FIXME function(a){ return function(b){ return a + b}} breaks here.
+
+				recursiveFind(instruction, 'id', true).forEach(function(ref){
 					if(locals.indexOf(ref.name) === -1 && captured.indexOf(ref.name) === -1){
 						captured.push(ref.name);
 					}
+
 				});
 
 				if(instruction.tag === "let_collection"){
+
 					recursiveFind(instruction, 'let').forEach(function(decl){
 						locals.push(decl.id.name);
 					});
+
 				}
 			});
 			//console.log(locals);
