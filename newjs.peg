@@ -1,4 +1,6 @@
 // Adapted from http=//hepunx.rl.ac.uk/~adye/jsspec11/llr.htm
+// http://timmywillison.com/pres/operators/#precedence
+
 
 Program=
           empty
@@ -73,7 +75,7 @@ AssignmentExpression=
 
 ConditionalExpression=
           OrExpression
-     /    OrExpression "?" AssignmentExpression "=" AssignmentExpression
+     /    OrExpression "?" AssignmentExpression ":" AssignmentExpression // Fix here, from "=" (???) to ":"
 
 OrExpression=
           AndExpression
@@ -103,14 +105,15 @@ RelationalExpression=
           ShiftExpression
      /    ShiftExpression RelationalationalOperator RelationalExpression // Fixed from RelationalExpression ... ShiftExpression, left recursion error!!!
 
+// TODO: instanceof, in
+
 ShiftExpression=
           AdditiveExpression
      /    AdditiveExpression ShiftOperator ShiftExpression
 
 AdditiveExpression=
           MultiplicativeExpression
-     /    MultiplicativeExpression "+" AdditiveExpression
-     /    MultiplicativeExpression "-" AdditiveExpression
+     /    MultiplicativeExpression AdditiveOperator AdditiveExpression
 
 MultiplicativeExpression=
           UnaryExpression
@@ -119,7 +122,7 @@ MultiplicativeExpression=
 UnaryExpression=
           MemberExpression
      /    UnaryOperator UnaryExpression
-     /    "-" UnaryExpression
+//     /    "-" UnaryExpression Not needed?
      /    IncrementOperator MemberExpression
      /    MemberExpression IncrementOperator
      /    "new" Constructor
@@ -159,6 +162,9 @@ PrimaryExpression=
      /    "null"
      /    "this"
 
+
+
+
 ws_nl=[ \w\t]
 empty = ws_nl*
 Identifier=h:valid_1st_idchar t:valid_idchar*
@@ -167,13 +173,14 @@ valid_1st_idchar=[a-zA-Z_$]
 
 valid_idchar=[0-9] / valid_1st_idchar
 eos=";"
-AssignmentOperator="="
-EqualityualityOperator="=="
-RelationalationalOperator="==="
-ShiftOperator="<<"
-MultiplicativeOperator="*"
-UnaryOperator="!"
-IncrementOperator="++"
+AssignmentOperator="=" / "+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "|="
+EqualityualityOperator="==" / "===" / "!=" / "!=="
+RelationalationalOperator=">=" / ">==" / "<=" / "<=="
+ShiftOperator="<<" / ">>" / "<<<" / ">>>"
+AdditiveOperator="+" / "-"
+MultiplicativeOperator="*" / "/" / "%"
+UnaryOperator="!" / "-" / "+" / "~" / "typeof" / "void"
+IncrementOperator="++" / "--"
 IntegerLiteral=
 		integer:valid_num+
 //		{ return { tag:"number_literal", value:new Number(integer.join(''))}; }
