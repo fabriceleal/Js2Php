@@ -101,7 +101,7 @@ EqualityExpression=
 
 RelationalExpression=
           ShiftExpression
-     /    RelationalExpression RelationalationalOperator ShiftExpression
+     /    ShiftExpression RelationalationalOperator RelationalExpression // Fixed from RelationalExpression ... ShiftExpression, left recursion error!!!
 
 ShiftExpression=
           AdditiveExpression
