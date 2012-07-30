@@ -8,8 +8,7 @@ Program=
 		/	empty
 
 Element=
-         "function" ws_nl+ id:Identifier? "(" ws_nl* pars:ParameterList? ")" ws_nl* body:CompoundStatement
-			{ console.log("function"); return { tag:"function", name: id , parameters: pars, body: body}; }
+         	FunctionLiteral
        /   Statement
 
 //ParameterListOpt=
@@ -135,7 +134,7 @@ EqualityExpression=
 		/	RelationalExpression
 
 RelationalExpression=
-         l:ShiftExpression op:RelationalationalOperator r:RelationalExpression // Fixed from RelationalExpression ... ShiftExpression, left recursion error!!!
+         l:ShiftExpression op:RelationalationalOperator r:RelationalExpression // Fixed from RelationalExpression ... ShiftExpression, left recursion error
 			{ return { tag:"rel", op:op, left:l, right:r}}
 		/	ShiftExpression
 
@@ -202,7 +201,7 @@ ArgumentList=
 			{ return { tag:"arglist", head:h, tail:[]}; }
 
 PrimaryExpression=
-      /**/    "(" ws_nl* e:Expression ")" ws_nl*
+			"(" ws_nl* e:Expression ")" ws_nl*
 			{ console.log("expression inside ()"); return e; }
      /    "false" ws_nl*
 			{ return { tag:"boolean", value:false}; }
@@ -212,10 +211,15 @@ PrimaryExpression=
 			{ return { tag:"null"}; }
      /    "this" ws_nl*
 			{ return { tag:"this"}; }
+	  /	 FunctionLiteral
      /    FloatingPointLiteral
      /    IntegerLiteral
      /    StringLiteral
      /    Identifier
+
+FunctionLiteral=
+			"function" ws_nl+ id:Identifier? "(" ws_nl* pars:ParameterList? ")" ws_nl* body:CompoundStatement
+			{ console.log("function"); return { tag:"function", name: id , parameters: pars, body: body}; }
 
 newline=[\r\n] / "\r\n"
 ws_nl=[ \s\t] / newline
@@ -225,7 +229,7 @@ empty =
 	{ console.log("empty"); return { tag:"empty" } }
 
 Identifier=
-	h:valid_1st_idchar t:valid_idchar*
+	h:valid_1st_idchar t:valid_idchar* ws_nl*
 	{ console.log("id = " + [h].concat(t).join('')); return { tag:"id", name:[h].concat(t).join('')}}
 
 _AssignmentOperator="=" / "+=" / "-=" / "*=" / "/=" / "%=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "|="
