@@ -94,9 +94,7 @@ Expression=
 		/	AssignmentExpression
 
 AssignmentExpression=
-		left:ConditionalExpression op:AssignmentOperator right:FunctionLiteral
-			{ return { tag:"assignmentop", operator:op, left:left, right:right}; }
-      /   left:ConditionalExpression op:AssignmentOperator right:AssignmentExpression
+		   left:ConditionalExpression op:AssignmentOperator right:AssignmentExpression
 			{ return { tag:"assignmentop", operator:op, left:left, right:right}; }
 		/	ConditionalExpression
 
