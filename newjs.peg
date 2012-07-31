@@ -3,13 +3,12 @@
 
 
 Program=
-          head:Element tail:Program ws_nl*
-			{ console.log("program"); return { tag:"program", head: head, tail:tail }; }
-		/	empty
+           head:Element tail:Program ws_nl*
+			 { console.log("program"); return { tag:"program", head: head, tail:tail }; }
 
 Element=
-         	FunctionLiteral
-       /   Statement
+           FunctionLiteral
+       / /**/  Statement
 
 //ParameterListOpt=
 //          empty
@@ -18,23 +17,24 @@ Element=
 ParameterList=          
          h:Identifier "," t:ParameterList
 			{ console.log("parameterlist"); return { tag: "parameter_list", head: h, tail: t }; }
-		/	Identifier
+		/	h:Identifier?
+			{ console.log("parameterlist"); return { tag: "parameter_list", head: h, tail: [] }; }
 
 CompoundStatement=
           "{" ws_nl* code:Statements "}" ws_nl*
 			{ console.log("compound"); return { tag: "compound", code: code }; }
-		/	"{" e:empty "}" ws_nl*
+		/	"{" empty "}" ws_nl*
 			{ console.log("compound (empty)"); return { tag: "compound", code: e }; }
 
 Statements=
           h:Statement t:Statements
 			{ console.log("statements"); return { tag: "statements", head: h, tail: t}; }
-		/	empty
+		/	 h:Statement?
+			{ console.log("statements"); return { tag: "statements", head: h, tail: []}; }
 
 Statement=
-         e:empty ";" ws_nl*
-			{ return e; }
-      /   "if" ws_nl* c:Condition ifthen:Statement "else" ws_nl* ifelse:Statement
+			empty ";"
+		/  "if" ws_nl* c:Condition ifthen:Statement "else" ws_nl* ifelse:Statement
 			{ return { tag: "if", condition:c, ifthen: ifthen, ifelse: ifelse}; }
       /  "if" ws_nl* c:Condition ifthen:Statement
 			{ return { tag: "if", condition:c, ifthen: ifthen}; }
@@ -60,7 +60,7 @@ Statement=
 
 Condition=
           "(" ws_nl* e:Expression ")" ws_nl*
-			{ return { tag:"condition", expression:e}; }
+			{ console.log("Condition"); return { tag:"condition", expression:e}; }
 
 ForParen=
           "for" ws_nl* "(" ws_nl*
@@ -76,12 +76,12 @@ VariablesOrExpression=
 
 Variables=
           h:Variable "," ws_nl* t:Variables
-			{ return { tag:"vars", head:head, tail:t}; }
+			{ console.log("Variables"); return { tag:"vars", head:head, tail:t}; }
 		/	Variable
 
 Variable=    
          left:Identifier "=" ws_nl* right:AssignmentExpression
-			{ return { tag:"assign", left:left, right:right}; }
+			{ console.log("Variable"); return { tag:"assign", left:left, right:right}; }
 		/	Identifier
 
 //ExpressionOpt=
@@ -90,52 +90,52 @@ Variable=
 
 Expression=
          a:AssignmentExpression "," ws_nl* e:Expression
-			{ return { tag:"expression", left:a, right:e}; }
+			{ console.log("Expression"); return { tag:"expression", left:a, right:e}; }
 		/	AssignmentExpression
 
 AssignmentExpression=
 		   left:ConditionalExpression op:AssignmentOperator right:AssignmentExpression
-			{ return { tag:"assignmentop", operator:op, left:left, right:right}; }
+			{ console.log("AssignmentExpression"); return { tag:"assignmentop", operator:op, left:left, right:right}; }
 		/	ConditionalExpression
 
 ConditionalExpression=
          cond:OrExpression "?" ws_nl* iftrue:AssignmentExpression ":" ws_nl* iffalse:AssignmentExpression // Fix here, from "=" (???) to ":"
-			{ return { tag:"conditionalop", condition:cond, iftrue:iftrue, iffalse:iffalse }; }
+			{ console.log("ConditionalExpression"); return { tag:"conditionalop", condition:cond, iftrue:iftrue, iffalse:iffalse }; }
 		/	OrExpression
 
 OrExpression=
          l:AndExpression "||" ws_nl* r:OrExpression
-			{ return { tag:"or", left:l, right:r}}
+			{ console.log("OrExpression"); return { tag:"or", left:l, right:r}}
 		/	AndExpression
 
 AndExpression=
          l:BitwiseOrExpression "&&" ws_nl* r:AndExpression
-			{ return { tag:"and", left:l, right:r}}
+			{ console.log("AndExpression"); return { tag:"and", left:l, right:r}}
 		/	BitwiseOrExpression
 
 BitwiseOrExpression=
          l:BitwiseXorExpression "|" ws_nl* r:BitwiseOrExpression
-			{ return { tag:"bor", left:l, right:r}}
+			{ console.log("BitwiseOrExpression"); return { tag:"bor", left:l, right:r}}
 		/	BitwiseXorExpression
 
 BitwiseXorExpression=
          l:BitwiseAndExpression "^" ws_nl* r:BitwiseXorExpression
-			{ return { tag:"bxor", left:l, right:r}}
+			{ console.log("BitwiseXorExpression"); return { tag:"bxor", left:l, right:r}}
 		/	BitwiseAndExpression
 
 BitwiseAndExpression=
          l:EqualityExpression "&" ws_nl* r:BitwiseAndExpression
-			{ return { tag:"band", left:l, right:r}}
+			{ console.log("BitwiseAndExpression"); return { tag:"band", left:l, right:r}}
 		/	EqualityExpression
 
 EqualityExpression=
          l:RelationalExpression op:EqualityualityOperator r:EqualityExpression
-			{ return { tag:"eq", op:op, left:l, right:r}}
+			{ console.log("EqualityExpression"); return { tag:"eq", op:op, left:l, right:r}}
 		/	RelationalExpression
 
 RelationalExpression=
          l:ShiftExpression op:RelationalationalOperator r:RelationalExpression // Fixed from RelationalExpression ... ShiftExpression, left recursion error
-			{ return { tag:"rel", op:op, left:l, right:r}}
+			{ console.log("RelationalExpression"); return { tag:"rel", op:op, left:l, right:r}}
 		/	ShiftExpression
 
 // TODO: instanceof, in
@@ -171,24 +171,28 @@ UnaryExpression=
 
 Constructor=
           "this" ws_nl* "." ws_nl* c:ConstructorCall
-			{ return { tag:"constructor", call:c }; }
+			{ console.log("constructor"); return { tag:"constructor", call:c }; }
      /    ConstructorCall
 
-ConstructorCall=          
+ConstructorCall=
 			id:Identifier "(" ws_nl* args:ArgumentList? ")" ws_nl*
-			{ return { tag:"constr_call_fun", id:id, args:args }; }
+			{ console.log("constr_call_fun"); return { tag:"constr_call_fun", id:id, args:args }; }
 		/  id:Identifier "." ws_nl* c:ConstructorCall
-			{ return { tag:"constr_call_member", id:id, call:c }; }
+			{ console.log("constr_call_member"); return { tag:"constr_call_member", id:id, call:c }; }
 		/	Identifier
 
+HeadOfMemberExpression=
+			FunctionLiteral
+		/	PrimaryExpression
+
 MemberExpression=
-		    p:PrimaryExpression "(" ws_nl* a:ArgumentList? ")" ws_nl*
+		    p:HeadOfMemberExpression "(" ws_nl* a:ArgumentList? ")" ws_nl*
 			{ console.log("member_fun"); return { tag:"member_fun", left:p, arglist:a}; }
-/**/  /   p:PrimaryExpression "." ws_nl* m:MemberExpression
+  		/   p:HeadOfMemberExpression "." ws_nl* m:MemberExpression
 			{ console.log("member_dot"); return  { tag:"member_dot", left:p, member:m}; }
-		/   p:PrimaryExpression "[" ws_nl* e:Expression "]" ws_nl*
+		/   p:HeadOfMemberExpression "[" ws_nl* e:Expression "]" ws_nl*
 			{ console.log("member_arr"); return { tag:"member_arr", left:p, expression:e}; }		
-		/	 PrimaryExpression
+		/	 HeadOfMemberExpression
 
 /*ArgumentListOpt=
           empty
@@ -211,14 +215,14 @@ PrimaryExpression=
 			{ return { tag:"null"}; }
      /    "this" ws_nl*
 			{ return { tag:"this"}; }
-	  /	 FunctionLiteral
+	  / 	 FunctionLiteral
      /    FloatingPointLiteral
      /    IntegerLiteral
      /    StringLiteral
      /    Identifier
 
 FunctionLiteral=
-			"function" ws_nl+ id:Identifier? "(" ws_nl* pars:ParameterList? ")" ws_nl* body:CompoundStatement
+			"function" ws_nl* id:Identifier? "(" ws_nl* pars:ParameterList? ")" ws_nl* body:CompoundStatement
 			{ console.log("function"); return { tag:"function", name: id , parameters: pars, body: body}; }
 
 newline=[\r\n] / "\r\n"
