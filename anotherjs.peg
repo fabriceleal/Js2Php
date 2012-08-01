@@ -18,6 +18,7 @@ Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionState
 					/ 	ReturnStatement / WithStatement / SwitchStatement / ThrowStatement / TryStatement
 */
 
+
 FunctionDeclaration =
 		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody ";"? WsNlStream
 		{ return { tag:"functionDecl", name:id, pars:pars, body:body}; }
@@ -25,6 +26,7 @@ FunctionDeclaration =
 FunctionExpression =
 		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody
 		{ return { tag:"functionExpr", name:id, pars:pars, body:body}; }
+
 
 FunctionBody =
 		"{" WsNlStream code:SourceElements? "}" WsNlStream
@@ -96,14 +98,16 @@ Literal 	=
 		l:LITERAL WsNlStream
 		{ return { tag:"literal", value:l}; }
 
-Identifier 	= 	
+Identifier = 	
 		i:IDENTIFIER_NAME WsNlStream
 		{ return { tag:"id", name:i}; }
 
-ArrayLiteral 	= 	
-		"[" ( Elision? "]" / ElementList Elision "]" / ElementList? "]" )
+ArrayLiteral = 	
+		"[" Elision? "]"
+	/ 	"[" ElementList Elision "]" 
+	/ 	"[" ElementList? "]"
 
-ElementList 	= 	
+ElementList = 	
 		Elision? AssignmentExpression ( Elision AssignmentExpression )*
 
 Elision 	= 	
@@ -170,44 +174,101 @@ ArgumentList =
 		h:AssignmentExpression t:ArgumentListTail*
 		{ return [h].concat(t); }
 
-LeftHandSideExpression = CallExpression / MemberExpression
-LeftHandSideExpressionForIn =	CallExpressionForIn / MemberExpressionForIn
+LeftHandSideExpression 			= CallExpression / MemberExpression
+LeftHandSideExpressionForIn 	= CallExpressionForIn / MemberExpressionForIn
 
 PostfixExpression 			= 	LeftHandSideExpression PostfixOperator?
 PostfixOperator 				= 	"++" / "--"
 UnaryExpression 				= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
 UnaryOperator 					= 	"delete" / "void" / "typeof" / "++" / "--" / "+" / "-" / "~" / "!"
+
+// Multiplicative
 MultiplicativeExpression 	= 	UnaryExpression ( MultiplicativeOperator UnaryExpression )*
 MultiplicativeOperator 		= 	"*" / "/" / "%"
-AdditiveExpression 			= 	MultiplicativeExpression ( AdditiveOperator MultiplicativeExpression )*
+
+// Additive
+AdditiveExpression 			= 	MultiplicativeExpression (AdditiveOperator MultiplicativeExpression)*
+
 AdditiveOperator 				= 	"+" / "-"
-ShiftExpression 				= 	AdditiveExpression ( ShiftOperator AdditiveExpression )*
+
+// Shift
+ShiftExpression 				= 	AdditiveExpression (ShiftOperator AdditiveExpression)*
 ShiftOperator 					= 	"<<" / ">>" / ">>>"
-RelationalExpression 		= 	ShiftExpression ( RelationalOperator ShiftExpression )*
+
+// Relational
+RelationalExpression 		= 	ShiftExpression (RelationalOperator ShiftExpression)*
 RelationalOperator 			= 	"<" / ">" / "<=" / ">=" / "instanceof" / "in"
-RelationalExpressionNoIn 	= 	ShiftExpression ( RelationalNoInOperator ShiftExpression )*
+
+RelationalExpressionNoIn 	= 	ShiftExpression (RelationalNoInOperator ShiftExpression)*
+
 RelationalNoInOperator 		= 	"<" / ">" / "<=" / ">=" / "instanceof"
-EqualityExpression 			= 	RelationalExpression ( EqualityOperator RelationalExpression )*
-EqualityExpressionNoIn 		= 	RelationalExpressionNoIn ( EqualityOperator RelationalExpressionNoIn )*
+
+// Equality
+EqualityExpression 			= 	
+		left:RelationalExpression op:EqualityOperator right:RelationalExpression
+		{ return { tag:"eq", left:left, op:op, right:right}; }
+	/	RelationalExpression
+
+EqualityExpressionNoIn 		= 	
+		left:RelationalExpressionNoIn op:EqualityOperator right:RelationalExpressionNoIn
+		{ return { tag:"eqNoIn", left:left, op:op, right:right}; }
+	/	RelationalExpressionNoIn
+
 EqualityOperator 				= 	"==" / "!=" / "===" / "!=="
-BitwiseANDExpression 		= 	EqualityExpression ( BitwiseANDOperator EqualityExpression )*
-BitwiseANDExpressionNoIn 	= 	EqualityExpressionNoIn ( BitwiseANDOperator EqualityExpressionNoIn )*
+
+// ...
+BitwiseANDExpression 		= 	EqualityExpression (BitwiseANDOperator EqualityExpression)*
+
+BitwiseANDExpressionNoIn 	= 	EqualityExpressionNoIn (BitwiseANDOperator EqualityExpressionNoIn)*
+
 BitwiseANDOperator 			= 	"&"
-BitwiseXORExpression 		= 	BitwiseANDExpression ( BitwiseXOROperator BitwiseANDExpression )*
-BitwiseXORExpressionNoIn 	= 	BitwiseANDExpressionNoIn ( BitwiseXOROperator BitwiseANDExpressionNoIn )*
+
+// ...
+BitwiseXORExpression 		= 	BitwiseANDExpression (BitwiseXOROperator BitwiseANDExpression)*
+
+BitwiseXORExpressionNoIn 	= 	BitwiseANDExpressionNoIn (BitwiseXOROperator BitwiseANDExpressionNoIn)*
+
+
 BitwiseXOROperator 			= 	"^"
-BitwiseORExpression 			= 	BitwiseXORExpression ( BitwiseOROperator BitwiseXORExpression )*
-BitwiseORExpressionNoIn 	= 	BitwiseXORExpressionNoIn ( BitwiseOROperator BitwiseXORExpressionNoIn )*
+
+// ...
+BitwiseORExpression 			= 	BitwiseXORExpression (BitwiseOROperator BitwiseXORExpression)*
+
+BitwiseORExpressionNoIn 	= 	BitwiseXORExpressionNoIn (BitwiseOROperator BitwiseXORExpressionNoIn)*
+
 BitwiseOROperator 			= 	"|"
-LogicalANDExpression 		= 	BitwiseORExpression ( LogicalANDOperator BitwiseORExpression )*
-LogicalANDExpressionNoIn 	= 	BitwiseORExpressionNoIn ( LogicalANDOperator BitwiseORExpressionNoIn )*
+
+// LogicalAND
+LogicalANDExpression 		= 	
+		left:BitwiseORExpression op:LogicalANDOperator right:BitwiseORExpression
+		{ return { tag:"and", left:left, op:op, right:right}; }
+	/	BitwiseORExpression
+
+LogicalANDExpressionNoIn 	= 	
+		left:BitwiseORExpressionNoIn op:LogicalANDOperator right:BitwiseORExpressionNoIn
+		{ return { tag:"andNoIn", left:left, op:op, right:right}; }
+	/	BitwiseORExpressionNoIn
+
 LogicalANDOperator 			= 	"&&"
-LogicalORExpression 			= 	LogicalANDExpression ( LogicalOROperator LogicalANDExpression )*
-LogicalORExpressionNoIn 	= 	LogicalANDExpressionNoIn ( LogicalOROperator LogicalANDExpressionNoIn )*
+
+// LogicalOR
+LogicalORExpression 			= 	
+		LogicalANDExpression LogicalOROperator LogicalANDExpression
+		{ return { tag:"or", left:left, op:op, right:right}; }
+	/	LogicalANDExpression
+
+LogicalORExpressionNoIn 	= 	
+		left:LogicalANDExpressionNoIn op:LogicalOROperator right:LogicalANDExpressionNoIn
+		{ return { tag:"orNoIn", left:left, op:op, right:right}; }
+	/	LogicalANDExpressionNoIn
+
 LogicalOROperator 			= 	"||"
+
+// ...
 ConditionalExpression 		= 	LogicalORExpression ( "?" AssignmentExpression ":" AssignmentExpression )?
 ConditionalExpressionNoIn 	= 	LogicalORExpressionNoIn ( "?" AssignmentExpression ":" AssignmentExpressionNoIn )?
 
+// Assignment
 AssignmentExpression 		= 	
 		l:LeftHandSideExpression op:AssignmentOperator r:AssignmentExpression 
 		{ return { tag:"assignment", left:l, operator:op, right:r}; }
@@ -219,6 +280,8 @@ AssignmentExpressionNoIn 	=
 	/	ConditionalExpressionNoIn
 
 AssignmentOperator 			= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
+
+// ...
 Expression 	= 	AssignmentExpression ( "," AssignmentExpression )* WsNlStream
 ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
 
@@ -316,19 +379,32 @@ CaseClause 	= 	( ( "case" Expression ":" ) ) ( StatementList )?
 
 DefaultClause 	= 	( ( "default" ":" ) ) ( StatementList )?
 
-LabelledStatement 	= 	i:Identifier ":" s:StatementWsNl
+LabelledStatement = 	
+		i:Identifier ":" s:StatementWsNl
 		{ return { tag:"labelled", id:i, statement:s}; }
 
-ThrowStatement 	= 	"throw" Expression ( ";" )?
+ThrowStatement	=
+		"throw" e:Expression ";"?
+		{ return { tag:"throw", value:e}}
 
-TryStatement 	= 	"try" Block ( ( Finally / Catch ( Finally )? ) )
+TryStatement 	= 	
+		"try" WsNlStream b:Block c:Catch f:Finally
+		{ return { tag:"try", block:b, catchBlock:c, 	finallyBlock:f};    }
+	/	"try" WsNlStream b:Block f:Finally
+		{ return { tag:"try", block:b, catchBlock:null, finallyBlock:f}; 	  }
+	/	"try" WsNlStream b:Block c:Catch
+		{ return { tag:"try", block:b, catchBlock:c, 	finallyBlock:null}; }
 
-Catch 	= 	"catch" "(" Identifier ")" Block
+Catch 	=
+		"catch" WsNlStream "(" WsNlStream i:Identifier ")" WsNlStream b:Block
+		{ return { tag:"catch", id:i, block:b}; }
 
-Finally 	= 	"finally" Block
+Finally 	=
+		"finally" WsNlStream b:Block
+		{ return { tag:"finally", block:b}; }
 
 
-ImportStatement 	= 	"import" Name ( "." "*" )? ";"
+ImportStatement = "import" Name ( "." "*" )? ";"
 
 NameTail="." t:IDENTIFIER_NAME
 		{ return t; }
