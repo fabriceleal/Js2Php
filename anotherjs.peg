@@ -206,16 +206,29 @@ ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
 
 StatementWsNl = Statement WsNlStream
 
-Block 	= 	"{" ( StatementList )? "}"
-StatementList 	= 	( StatementWsNl )+
+Block = 
+		"{" WsNlStream l:StatementList? "}" WsNlStream
+		{ return { tag:"block", value:l}; }
+
+StatementList 	= 	StatementWsNl+
 
 VariableStatement 	= 	
 		"var " WsNlStream l:VariableDeclarationList ";"? WsNlStream
 		{ return {tag:"varStatement", value:l}; }
 
-VariableDeclarationList 	= 	VariableDeclaration ( "," VariableDeclaration )*
+// VariableDeclarationList
+VariableDeclarationListTail="," WsNlStream i:VariableDeclaration
+		{ return i; }
+VariableDeclarationList =
+		h:VariableDeclaration t:VariableDeclarationListTail*
+		{ return [h].concat(t); }
 
-VariableDeclarationListNoIn 	= 	VariableDeclarationNoIn ( "," VariableDeclarationNoIn )*
+// VariableDeclarationListNoIn
+VariableDeclarationListNoInTail="," WsNlStream i:VariableDeclarationNoIn
+		{ return i;}
+VariableDeclarationListNoIn = 
+		h:VariableDeclarationNoIn t:VariableDeclarationListNoInTail*
+		{ return [h].concat(t); }
 
 VariableDeclaration 	= 	
 		id:Identifier init:Initialiser?
