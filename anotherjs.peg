@@ -5,7 +5,7 @@
 
 start=Program
 
-Program 	= 	SourceElement
+Program 	= 	SourceElements
 SourceElements = 	SourceElement*
 SourceElement 	= 	FunctionDeclaration
 	/ 	StatementWsNl
@@ -27,55 +27,103 @@ Statement 	= 	Block
 	/ 	ThrowStatement
 	/ 	TryStatement
 
-FunctionDeclaration	= "function " Identifier "(" FormalParameterList/*?*/ ")" FunctionBody WsNlStream ";"? WsNlStream
+FunctionDeclaration	= "function" Identifier "(" FormalParameterList/*?*/ ")" FunctionBody WsNlStream ";"? WsNlStream
 
-FunctionExpression 	= "function " Identifier? "(" FormalParameterList ")" FunctionBody WsNlStream
+FunctionExpression 	= 
+		"function" id:Identifier? "(" pars:FormalParameterList ")" body:FunctionBody WsNlStream
+		{ return {tag:"functionExpr", name:id, pars:pars, body:body}; }
 
-FunctionBody 	= 	"{" /*SourceElements?*/ "}" WsNlStream
+FunctionBody 	= 	"{" SourceElements? "}" WsNlStream
 
-FormalParameterList 	= 	Identifier WsNlStream ( "," WsNlStream Identifier WsNlStream )*
+FormalParameterListTail = "," WsNlStream i:Identifier
+		{ return i; }
+
+FormalParameterList 	= 	h:Identifier t:FormalParameterListTail*
+		{ return { tag:"formalParameterList", value:[h].concat(t)}; }
 
 ExpressionStatement 	= 	Expression ";"? WsNlStream
 
 PrimaryExpression = 
 		"this"
 	/ 	ObjectLiteral
-	/ 	( "(" Expression ")" )
+	/ 	( "(" WsNlStream e:Expression WsNlStream ")" )
+		{ return e; }
 	/ 	Identifier
 	/ 	ArrayLiteral
 	/ 	Literal
 
 DECIMAL_LITERAL= "1"
 HEX_INTEGER_LITERAL= "0x1"
-STRING_LITERAL= "'test'"
+STRING_LITERAL= 
+		"'" a:(!"'" .)* "'"
+		{ return { tag:"string_literal", value:a.map(function(e){return e.join('');}).join('')}; }
+	/	"\"" a:(!"\"" .)* "\""
+		{ return { tag:"string_literal", value:a.map(function(e){return e.join('');}).join('')}; }
+
 BOOLEAN_LITERAL= "true" / "false"
 NULL_LITERAL= "NULL" / "null"
 REGULAR_EXPRESSION_LITERAL="blah"
 IDENTIFIER_NAME="id"
 
-Literal 	= 	( DECIMAL_LITERAL / HEX_INTEGER_LITERAL / STRING_LITERAL / BOOLEAN_LITERAL / NULL_LITERAL / REGULAR_EXPRESSION_LITERAL )
+LITERAL	= ( DECIMAL_LITERAL / HEX_INTEGER_LITERAL / STRING_LITERAL / BOOLEAN_LITERAL / NULL_LITERAL / REGULAR_EXPRESSION_LITERAL )
+Literal 	= 	
+		l:LITERAL WsNlStream
+		{ return { tag:"literal", value:l}; }
 
-Identifier 	= 	IDENTIFIER_NAME
+Identifier 	= 	
+		i:IDENTIFIER_NAME WsNlStream
+		{ return { tag:"id", name:i}; }
+
 ArrayLiteral 	= 	"[" ( ( Elision )? "]" / ElementList Elision "]" / ( ElementList )? "]" )
 ElementList 	= 	( Elision )? AssignmentExpression ( Elision AssignmentExpression )*
 Elision 	= 	( "," )+
-ObjectLiteral 	= 	"{" ( PropertyNameAndValueList )? "}"
-PropertyNameAndValueList 	= 	PropertyNameAndValue ( "," PropertyNameAndValue / "," )*
-PropertyNameAndValue 	= 	PropertyName ":" AssignmentExpression
-PropertyName 	= 	Identifier
+
+ObjectLiteral 	= 	"{" ls:PropertyNameAndValueList? "}"
+		{ return { tag:"object", value:ls}; }
+
+PropertyNameAndValueListTail	=  
+		"," p:PropertyNameAndValue
+		{ return [p]; }
+	/	","
+		{ return []; }
+
+PropertyNameAndValueList 	= 	
+		h:PropertyNameAndValue t:PropertyNameAndValueListTail*
+		{ return Array.prototype.concat.apply([h], t); }
+		
+PropertyNameAndValue 	= 	
+		key:PropertyName ":" value:AssignmentExpression
+		{ return { tag:"objectSlot", key:key, value:value}; }
+
+PropertyName 	= 	
+		Identifier
 	/ 	STRING_LITERAL
 	/ 	DECIMAL_LITERAL
-MemberExpression 	= 	( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
+
+MemberExpression 	= 	
+		( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
 	/ 	AllocationExpression
+
 MemberExpressionForIn 	= 	( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
 AllocationExpression 	= 	( "new" MemberExpression ( ( Arguments ( MemberExpressionPart )* )* ) )
-MemberExpressionPart 	= 	( "[" Expression "]" )
-	/ 	( "." Identifier )
-CallExpression 	= 	MemberExpression Arguments ( CallExpressionPart )*
-CallExpressionForIn 	= 	MemberExpressionForIn Arguments ( CallExpressionPart )*
-CallExpressionPart 	= 	Arguments
-	/ 	( "[" Expression "]" )
-	/ 	( "." Identifier )
+
+MemberExpressionPart 	= 	
+		( "[" e:Expression "]" )
+		{ return { tag:"memberExpressionPartOffset", value:e}; }
+	/ 	( "." id:Identifier )
+		{ return { tag:"memberExpressionPartDot", value: id}; }
+
+CallExpression 	= 	MemberExpression Arguments CallExpressionPart*
+CallExpressionForIn 	= 	MemberExpressionForIn Arguments CallExpressionPart*
+
+CallExpressionPart 	= 	
+		a:Arguments
+		{ return { tag:"callExpressionPartArgs", value:a }; }
+	/ 	( "[" e:Expression "]" )
+		{ return { tag:"callExpressionPartOffset", value:e }; }
+	/ 	( "." i:Identifier )
+		{ return { tag:"callExpressionPartDot", value:i}; }
+
 Arguments 	= 	"(" ( ArgumentList )? ")"
 ArgumentList 	= 	AssignmentExpression ( "," AssignmentExpression )*
 LeftHandSideExpression 	= 	CallExpression
@@ -144,7 +192,10 @@ IterationStatement 	= 	( "do" StatementWsNl "while" "(" Expression ")" ( ";" )? 
 	/ 	( "for" "(" LeftHandSideExpressionForIn "in" Expression ")" StatementWsNl )
 ContinueStatement 	= 	"continue" ( Identifier )? ( ";" )?
 BreakStatement 	= 	"break" ( Identifier )? ( ";" )?
-ReturnStatement 	= 	"return" ( Expression )? ( ";" )?
+
+ReturnStatement 	= 	"return" WsNlStream e:Expression? ";"? WsNlStream
+		{ return { tag:"return", value:e }; }
+
 WithStatement 	= 	"with" "(" Expression ")" StatementWsNl
 SwitchStatement 	= 	"switch" "(" Expression ")" CaseBlock
 CaseBlock 	= 	"{" ( CaseClauses )? ( "}" / DefaultClause ( CaseClauses )? "}" )
@@ -160,7 +211,10 @@ Finally 	= 	"finally" Block
 
 ImportStatement 	= 	"import" Name ( "." "*" )? ";"
 
-Name 	= 	IDENTIFIER_NAME ( "." IDENTIFIER_NAME )*
+NameTail="." t:IDENTIFIER_NAME
+		{ return t; }
+Name 	= 	h:IDENTIFIER_NAME t:NameTail*
+		{ return { tag:"name", value:[h].concat(t)}; }
 
 //JScriptVarStatement 	= 	"var " JScriptVarDeclarationList ( ";" )?
 //JScriptVarDeclarationList 	= 	JScriptVarDeclaration ( "," JScriptVarDeclaration )*
