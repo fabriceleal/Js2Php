@@ -1,39 +1,33 @@
 /*
-	From here: http://tomcopeland.blogs.com/EcmaScript.html
-	Yet in BNF format.
+	From here: http://tomcopeland.blogs.com/EcmaScript.html (in BNF format).
+	Adapted by Fabrice.
 */
 
-start=Program
+start				= Program
 
-Program 	= 	SourceElements
-SourceElements = 	SourceElement*
-SourceElement 	= 	FunctionDeclaration
-	/ 	StatementWsNl
+Program			= SourceElements
+SourceElements = SourceElement*
+SourceElement 	= FunctionDeclaration / StatementWsNl
+Statement 		= Block / VariableStatement / EmptyStatement / LabelledStatement / ReturnStatement / ExpressionStatement
+					/ 	IfStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
+					/ 	WithStatement / SwitchStatement / ThrowStatement / TryStatement
 
-Statement 	= 	Block
-	/// 	JScriptVarStatement
-	/ 	VariableStatement
-	/ 	EmptyStatement
-	/ 	LabelledStatement
-	/ 	ExpressionStatement
-	/ 	IfStatement
-	/ 	IterationStatement
-	/ 	ContinueStatement
-	/ 	BreakStatement
-	/ 	ImportStatement
-	/ 	ReturnStatement
-	/ 	WithStatement
-	/ 	SwitchStatement
-	/ 	ThrowStatement
-	/ 	TryStatement
+/*
+Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionStatement
+					/ 	IfStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
+					/ 	ReturnStatement / WithStatement / SwitchStatement / ThrowStatement / TryStatement
+*/
 
-FunctionDeclaration	= "function" Identifier "(" FormalParameterList/*?*/ ")" FunctionBody WsNlStream ";"? WsNlStream
+FunctionDeclaration	= 
+		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody ";"? WsNlStream
+		{ return { tag:"functionDecl", name:id, pars:pars, body:body}; }
 
 FunctionExpression 	= 
-		"function" id:Identifier? "(" pars:FormalParameterList ")" body:FunctionBody WsNlStream
-		{ return {tag:"functionExpr", name:id, pars:pars, body:body}; }
+		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody
+		{ return { tag:"functionExpr", name:id, pars:pars, body:body}; }
 
-FunctionBody 	= 	"{" SourceElements? "}" WsNlStream
+FunctionBody 	= 	"{" WsNlStream code:SourceElements? "}" WsNlStream
+		{ return { tag:"functionBody", code:code}; }
 
 FormalParameterListTail = "," WsNlStream i:Identifier
 		{ return i; }
@@ -41,7 +35,8 @@ FormalParameterListTail = "," WsNlStream i:Identifier
 FormalParameterList 	= 	h:Identifier t:FormalParameterListTail*
 		{ return { tag:"formalParameterList", value:[h].concat(t)}; }
 
-ExpressionStatement 	= 	Expression ";"? WsNlStream
+ExpressionStatement 	= 	e:Expression ";"? WsNlStream
+		{ return { tag:"expression", value:e}; }
 
 PrimaryExpression = 
 		"this"
@@ -52,20 +47,37 @@ PrimaryExpression =
 	/ 	ArrayLiteral
 	/ 	Literal
 
-DECIMAL_LITERAL= "1"
-HEX_INTEGER_LITERAL= "0x1"
-STRING_LITERAL= 
-		"'" a:(!"'" .)* "'"
+// Literals
+
+DECIMAL_LITERAL = "1"
+HEX_INTEGER_LITERAL = "0x1"
+STRING_LITERAL = 
+		"'" a:(!"'" .)* "'" WsNlStream
 		{ return { tag:"string_literal", value:a.map(function(e){return e.join('');}).join('')}; }
-	/	"\"" a:(!"\"" .)* "\""
+	/	"\"" a:(!"\"" .)* "\"" WsNlStream
 		{ return { tag:"string_literal", value:a.map(function(e){return e.join('');}).join('')}; }
 
-BOOLEAN_LITERAL= "true" / "false"
-NULL_LITERAL= "NULL" / "null"
-REGULAR_EXPRESSION_LITERAL="blah"
-IDENTIFIER_NAME="id"
+BOOLEAN_LITERAL = 
+		"true"	WsNlStream
+		{ return { tag:"bool_literal", value:true}; }
+	/	"false"	WsNlStream
+		{ return { tag:"bool_literal", value:false}; }
 
-LITERAL	= ( DECIMAL_LITERAL / HEX_INTEGER_LITERAL / STRING_LITERAL / BOOLEAN_LITERAL / NULL_LITERAL / REGULAR_EXPRESSION_LITERAL )
+NULL_LITERAL = 
+		"null" 	WsNlStream
+		{ return { tag:"null_literal"}; }
+
+REGULAR_EXPRESSION_LITERAL	= "blah"
+
+// Identifiers
+IDENTIFIER_NAME_CHAR			= IDENTIFIER_NAME_1ST_CHAR / [0-9]
+IDENTIFIER_NAME_1ST_CHAR	= [a-zA-Z]
+IDENTIFIER_NAME				= 
+		h:IDENTIFIER_NAME_1ST_CHAR t:IDENTIFIER_NAME_CHAR*
+		{ return [h].concat(t).join(''); }
+
+
+LITERAL	= DECIMAL_LITERAL / HEX_INTEGER_LITERAL / STRING_LITERAL / BOOLEAN_LITERAL / NULL_LITERAL / REGULAR_EXPRESSION_LITERAL
 Literal 	= 	
 		l:LITERAL WsNlStream
 		{ return { tag:"literal", value:l}; }
@@ -78,13 +90,13 @@ ArrayLiteral 	= 	"[" ( ( Elision )? "]" / ElementList Elision "]" / ( ElementLis
 ElementList 	= 	( Elision )? AssignmentExpression ( Elision AssignmentExpression )*
 Elision 	= 	( "," )+
 
-ObjectLiteral 	= 	"{" ls:PropertyNameAndValueList? "}"
+ObjectLiteral 	= 	"{" WsNlStream ls:PropertyNameAndValueList? "}"
 		{ return { tag:"object", value:ls}; }
 
 PropertyNameAndValueListTail	=  
-		"," p:PropertyNameAndValue
+		"," WsNlStream p:PropertyNameAndValue
 		{ return [p]; }
-	/	","
+	/	"," WsNlStream
 		{ return []; }
 
 PropertyNameAndValueList 	= 	
@@ -92,7 +104,7 @@ PropertyNameAndValueList 	=
 		{ return Array.prototype.concat.apply([h], t); }
 		
 PropertyNameAndValue 	= 	
-		key:PropertyName ":" value:AssignmentExpression
+		key:PropertyName ":" WsNlStream value:AssignmentExpression
 		{ return { tag:"objectSlot", key:key, value:value}; }
 
 PropertyName 	= 	
@@ -108,28 +120,41 @@ MemberExpressionForIn 	= 	( ( FunctionExpression / PrimaryExpression ) ( MemberE
 AllocationExpression 	= 	( "new" MemberExpression ( ( Arguments ( MemberExpressionPart )* )* ) )
 
 MemberExpressionPart 	= 	
-		( "[" e:Expression "]" )
+		"[" WsNlStream e:Expression "]" WsNlStream
 		{ return { tag:"memberExpressionPartOffset", value:e}; }
-	/ 	( "." id:Identifier )
+	/ 	"." WsNlStream id:Identifier
 		{ return { tag:"memberExpressionPartDot", value: id}; }
 
-CallExpression 	= 	MemberExpression Arguments CallExpressionPart*
-CallExpressionForIn 	= 	MemberExpressionForIn Arguments CallExpressionPart*
+CallExpression = 	MemberExpression Arguments CallExpressionPart*
+CallExpressionForIn = MemberExpressionForIn Arguments CallExpressionPart*
 
-CallExpressionPart 	= 	
+CallExpressionPart = 	
 		a:Arguments
 		{ return { tag:"callExpressionPartArgs", value:a }; }
-	/ 	( "[" e:Expression "]" )
+	/ 	"[" WsNlStream e:Expression "]" WsNlStream
 		{ return { tag:"callExpressionPartOffset", value:e }; }
-	/ 	( "." i:Identifier )
+	/ 	"." WsNlStream i:Identifier
 		{ return { tag:"callExpressionPartDot", value:i}; }
 
-Arguments 	= 	"(" ( ArgumentList )? ")"
-ArgumentList 	= 	AssignmentExpression ( "," AssignmentExpression )*
-LeftHandSideExpression 	= 	CallExpression
+Arguments = "(" WsNlStream a:ArgumentList? ")" WsNlStream
+		{ return { tag:"arguments", value:a}; }
+
+ArgumentListTail	= 
+		"," WsNlStream i:AssignmentExpression
+		{ return i; }
+
+ArgumentList = 
+		h:AssignmentExpression t:ArgumentListTail*
+		{ return [h].concat(t); }
+
+LeftHandSideExpression = 
+		CallExpression
 	/ 	MemberExpression
-LeftHandSideExpressionForIn 	= 	CallExpressionForIn
+
+LeftHandSideExpressionForIn =	
+		CallExpressionForIn
 	/ 	MemberExpressionForIn
+
 PostfixExpression 	= 	LeftHandSideExpression ( PostfixOperator )?
 PostfixOperator 	= 	( "++" / "--" )
 UnaryExpression 	= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
@@ -164,9 +189,18 @@ LogicalORExpressionNoIn 	= 	LogicalANDExpressionNoIn ( LogicalOROperator Logical
 LogicalOROperator 	= 	"||"
 ConditionalExpression 	= 	LogicalORExpression ( "?" AssignmentExpression ":" AssignmentExpression )?
 ConditionalExpressionNoIn 	= 	LogicalORExpressionNoIn ( "?" AssignmentExpression ":" AssignmentExpressionNoIn )?
-AssignmentExpression 	= 	( LeftHandSideExpression AssignmentOperator AssignmentExpression / ConditionalExpression )
-AssignmentExpressionNoIn 	= 	( LeftHandSideExpression AssignmentOperator AssignmentExpressionNoIn / ConditionalExpressionNoIn )
-AssignmentOperator 	= 	( "=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/=" )
+
+AssignmentExpression 		= 	
+		l:LeftHandSideExpression op:AssignmentOperator r:AssignmentExpression 
+		{ return { tag:"assignment", left:l, operator:op, right:r}; }
+	/ 	ConditionalExpression
+
+AssignmentExpressionNoIn 	= 	
+		l:LeftHandSideExpression op:AssignmentOperator r:AssignmentExpressionNoIn 
+		{ return { tag:"assignmentNoIn", left:l, operator:op, right:r}; }
+	/	ConditionalExpressionNoIn
+
+AssignmentOperator 	= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
 Expression 	= 	AssignmentExpression ( "," AssignmentExpression )* WsNlStream
 ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
 
@@ -174,12 +208,26 @@ StatementWsNl = Statement WsNlStream
 
 Block 	= 	"{" ( StatementList )? "}"
 StatementList 	= 	( StatementWsNl )+
-VariableStatement 	= 	"var " VariableDeclarationList ( ";" )?
+
+VariableStatement 	= 	
+		"var " WsNlStream l:VariableDeclarationList ";"? WsNlStream
+		{ return {tag:"varStatement", value:l}; }
+
 VariableDeclarationList 	= 	VariableDeclaration ( "," VariableDeclaration )*
+
 VariableDeclarationListNoIn 	= 	VariableDeclarationNoIn ( "," VariableDeclarationNoIn )*
-VariableDeclaration 	= 	Identifier ( Initialiser )?
-VariableDeclarationNoIn 	= 	Identifier ( InitialiserNoIn )?
-Initialiser 	= 	"=" AssignmentExpression
+
+VariableDeclaration 	= 	
+		id:Identifier init:Initialiser?
+		{ return { tag:"declaration", name:id, init:init}; }
+
+VariableDeclarationNoIn = 
+		Identifier ( InitialiserNoIn )?
+
+Initialiser 	= 	
+		"=" WsNlStream e:AssignmentExpression
+		{ return { tag:"initialiser", value:e}}
+
 InitialiserNoIn 	= 	"=" AssignmentExpressionNoIn
 EmptyStatement 	= 	";"
 
