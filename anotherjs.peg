@@ -8,9 +8,9 @@ start				= Program
 Program			= SourceElements
 SourceElements = SourceElement*
 SourceElement 	= FunctionDeclaration / StatementWsNl
-Statement 		= Block / VariableStatement / EmptyStatement / LabelledStatement / ReturnStatement / ExpressionStatement
-					/ 	IfStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
-					/ 	WithStatement / SwitchStatement / ThrowStatement / TryStatement
+Statement 		= Block / VariableStatement / EmptyStatement / LabelledStatement / ReturnStatement / IfStatement
+						/ ExpressionStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
+						/ 	WithStatement / SwitchStatement / ThrowStatement / TryStatement
 
 /*
 Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionStatement
@@ -39,9 +39,10 @@ ExpressionStatement 	= 	e:Expression ";"? WsNlStream
 		{ return { tag:"expression", value:e}; }
 
 PrimaryExpression = 
-		"this"
+		"this" WsNlStream
+		{ return { tag:"thisRef"}; }
 	/ 	ObjectLiteral
-	/ 	( "(" WsNlStream e:Expression WsNlStream ")" )
+	/ 	"(" WsNlStream e:Expression WsNlStream ")" WsNlStream
 		{ return e; }
 	/ 	Identifier
 	/ 	ArrayLiteral
@@ -49,8 +50,15 @@ PrimaryExpression =
 
 // Literals
 
-DECIMAL_LITERAL = "1"
-HEX_INTEGER_LITERAL = "0x1"
+DECIMAL_LITERAL = 
+		d:DECIMAL_DIGIT+
+		{ return { tag:"number_literal", value:new Number(d.join(''))}; }
+
+// I dont care about preserving hex literals. do you?
+HEX_INTEGER_LITERAL = 
+		"0x" d:HEX_DIGIT+
+		{ return { tag:"number_literal", value:new Number("0x" + d.join(''))}; }
+
 STRING_LITERAL = 
 		"'" a:(!"'" .)* "'" WsNlStream
 		{ return { tag:"string_literal", value:a.map(function(e){return e.join('');}).join('')}; }
@@ -70,7 +78,9 @@ NULL_LITERAL =
 REGULAR_EXPRESSION_LITERAL	= "blah"
 
 // Identifiers
-IDENTIFIER_NAME_CHAR			= IDENTIFIER_NAME_1ST_CHAR / [0-9]
+HEX_DIGIT						= [A-F0-9]
+DECIMAL_DIGIT					= [0-9]
+IDENTIFIER_NAME_CHAR			= IDENTIFIER_NAME_1ST_CHAR / DECIMAL_DIGIT
 IDENTIFIER_NAME_1ST_CHAR	= [a-zA-Z]
 IDENTIFIER_NAME				= 
 		h:IDENTIFIER_NAME_1ST_CHAR t:IDENTIFIER_NAME_CHAR*
@@ -147,15 +157,11 @@ ArgumentList =
 		h:AssignmentExpression t:ArgumentListTail*
 		{ return [h].concat(t); }
 
-LeftHandSideExpression = 
-		CallExpression
-	/ 	MemberExpression
+LeftHandSideExpression = CallExpression / MemberExpression
 
-LeftHandSideExpressionForIn =	
-		CallExpressionForIn
-	/ 	MemberExpressionForIn
+LeftHandSideExpressionForIn =	CallExpressionForIn / MemberExpressionForIn
 
-PostfixExpression 	= 	LeftHandSideExpression ( PostfixOperator )?
+PostfixExpression 	= 	LeftHandSideExpression PostfixOperator?
 PostfixOperator 	= 	( "++" / "--" )
 UnaryExpression 	= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
 UnaryOperator 	= 	( "delete" / "void" / "typeof" / "++" / "--" / "+" / "-" / "~" / "!" )
@@ -204,13 +210,15 @@ AssignmentOperator 	= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / 
 Expression 	= 	AssignmentExpression ( "," AssignmentExpression )* WsNlStream
 ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
 
-StatementWsNl = Statement WsNlStream
+StatementWsNl = s:Statement WsNlStream
+		{ return s; }
 
 Block = 
 		"{" WsNlStream l:StatementList? "}" WsNlStream
 		{ return { tag:"block", value:l}; }
 
-StatementList 	= 	StatementWsNl+
+StatementList 	= 	ss:StatementWsNl+
+		{ return { tag:"statementList", value:ss}; }
 
 VariableStatement 	= 	
 		"var " WsNlStream l:VariableDeclarationList ";"? WsNlStream
@@ -230,21 +238,33 @@ VariableDeclarationListNoIn =
 		h:VariableDeclarationNoIn t:VariableDeclarationListNoInTail*
 		{ return [h].concat(t); }
 
+// VariableDeclaration*
 VariableDeclaration 	= 	
 		id:Identifier init:Initialiser?
 		{ return { tag:"declaration", name:id, init:init}; }
 
 VariableDeclarationNoIn = 
-		Identifier ( InitialiserNoIn )?
+		id:Identifier init:InitialiserNoIn?
+		{ return { tag:"declarationNoIn", name:id, init:init}; }
 
+// Initialiser*
 Initialiser 	= 	
 		"=" WsNlStream e:AssignmentExpression
-		{ return { tag:"initialiser", value:e}}
+		{ return { tag:"initialiser", value:e}; }
 
-InitialiserNoIn 	= 	"=" AssignmentExpressionNoIn
-EmptyStatement 	= 	";"
+InitialiserNoIn 	= 	
+		"=" WsNlStream e:AssignmentExpressionNoIn
+		{ return { tag:"initialiserNoIn", value:e}; }
 
-IfStatement 	= 	"if" "(" Expression ")" StatementWsNl ( "else" StatementWsNl )?
+EmptyStatement 	= 	WsNlStream ";" WsNlStream
+		{ return { tag:"empty"}; }
+
+IfStatement 	= 	
+		"if" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream truebr:StatementWsNl "else" WsNlStream falsebr:StatementWsNl
+		{ return { tag:"if", condition:e, truebr:truebr, falsebr:falsebr}; }
+	/	"if" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream truebr:StatementWsNl
+		{ return { tag:"if", condition:e, truebr:truebr, falsebr:null}; }
+
 IterationStatement 	= 	( "do" StatementWsNl "while" "(" Expression ")" ( ";" )? )
 	/ 	( "while" "(" Expression ")" StatementWsNl )
 	/ 	( "for" "(" ( ExpressionNoIn )? ";" ( Expression )? ";" ( Expression )? ")" StatementWsNl )
