@@ -18,24 +18,28 @@ Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionState
 					/ 	ReturnStatement / WithStatement / SwitchStatement / ThrowStatement / TryStatement
 */
 
-FunctionDeclaration	= 
+FunctionDeclaration =
 		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody ";"? WsNlStream
 		{ return { tag:"functionDecl", name:id, pars:pars, body:body}; }
 
-FunctionExpression 	= 
+FunctionExpression =
 		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody
 		{ return { tag:"functionExpr", name:id, pars:pars, body:body}; }
 
-FunctionBody 	= 	"{" WsNlStream code:SourceElements? "}" WsNlStream
+FunctionBody =
+		"{" WsNlStream code:SourceElements? "}" WsNlStream
 		{ return { tag:"functionBody", code:code}; }
 
-FormalParameterListTail = "," WsNlStream i:Identifier
+FormalParameterListTail =
+		"," WsNlStream i:Identifier
 		{ return i; }
 
-FormalParameterList 	= 	h:Identifier t:FormalParameterListTail*
+FormalParameterList =
+		h:Identifier t:FormalParameterListTail*
 		{ return { tag:"formalParameterList", value:[h].concat(t)}; }
 
-ExpressionStatement 	= 	e:Expression ";"? WsNlStream
+ExpressionStatement =
+		e:Expression ";"? WsNlStream
 		{ return { tag:"expression", value:e}; }
 
 PrimaryExpression = 
@@ -96,9 +100,14 @@ Identifier 	=
 		i:IDENTIFIER_NAME WsNlStream
 		{ return { tag:"id", name:i}; }
 
-ArrayLiteral 	= 	"[" ( ( Elision )? "]" / ElementList Elision "]" / ( ElementList )? "]" )
-ElementList 	= 	( Elision )? AssignmentExpression ( Elision AssignmentExpression )*
-Elision 	= 	( "," )+
+ArrayLiteral 	= 	
+		"[" ( Elision? "]" / ElementList Elision "]" / ElementList? "]" )
+
+ElementList 	= 	
+		Elision? AssignmentExpression ( Elision AssignmentExpression )*
+
+Elision 	= 	
+		","+
 
 ObjectLiteral 	= 	"{" WsNlStream ls:PropertyNameAndValueList? "}"
 		{ return { tag:"object", value:ls}; }
@@ -126,8 +135,11 @@ MemberExpression 	=
 		( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
 	/ 	AllocationExpression
 
-MemberExpressionForIn 	= 	( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
-AllocationExpression 	= 	( "new" MemberExpression ( ( Arguments ( MemberExpressionPart )* )* ) )
+MemberExpressionForIn 	= 	
+		( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
+
+AllocationExpression 	= 	
+		( "new" MemberExpression ( ( Arguments ( MemberExpressionPart )* )* ) )
 
 MemberExpressionPart 	= 	
 		"[" WsNlStream e:Expression "]" WsNlStream
@@ -146,7 +158,8 @@ CallExpressionPart =
 	/ 	"." WsNlStream i:Identifier
 		{ return { tag:"callExpressionPartDot", value:i}; }
 
-Arguments = "(" WsNlStream a:ArgumentList? ")" WsNlStream
+Arguments = 
+		"(" WsNlStream a:ArgumentList? ")" WsNlStream
 		{ return { tag:"arguments", value:a}; }
 
 ArgumentListTail	= 
@@ -158,42 +171,41 @@ ArgumentList =
 		{ return [h].concat(t); }
 
 LeftHandSideExpression = CallExpression / MemberExpression
-
 LeftHandSideExpressionForIn =	CallExpressionForIn / MemberExpressionForIn
 
-PostfixExpression 	= 	LeftHandSideExpression PostfixOperator?
-PostfixOperator 	= 	( "++" / "--" )
-UnaryExpression 	= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
-UnaryOperator 	= 	( "delete" / "void" / "typeof" / "++" / "--" / "+" / "-" / "~" / "!" )
+PostfixExpression 			= 	LeftHandSideExpression PostfixOperator?
+PostfixOperator 				= 	"++" / "--"
+UnaryExpression 				= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
+UnaryOperator 					= 	"delete" / "void" / "typeof" / "++" / "--" / "+" / "-" / "~" / "!"
 MultiplicativeExpression 	= 	UnaryExpression ( MultiplicativeOperator UnaryExpression )*
-MultiplicativeOperator 	= 	( "*" / "/" / "%" )
-AdditiveExpression 	= 	MultiplicativeExpression ( AdditiveOperator MultiplicativeExpression )*
-AdditiveOperator 	= 	( "+" / "-" )
-ShiftExpression 	= 	AdditiveExpression ( ShiftOperator AdditiveExpression )*
-ShiftOperator 	= 	( "<<" / ">>" / ">>>" )
-RelationalExpression 	= 	ShiftExpression ( RelationalOperator ShiftExpression )*
-RelationalOperator 	= 	( "<" / ">" / "<=" / ">=" / "instanceof" / "in" )
+MultiplicativeOperator 		= 	"*" / "/" / "%"
+AdditiveExpression 			= 	MultiplicativeExpression ( AdditiveOperator MultiplicativeExpression )*
+AdditiveOperator 				= 	"+" / "-"
+ShiftExpression 				= 	AdditiveExpression ( ShiftOperator AdditiveExpression )*
+ShiftOperator 					= 	"<<" / ">>" / ">>>"
+RelationalExpression 		= 	ShiftExpression ( RelationalOperator ShiftExpression )*
+RelationalOperator 			= 	"<" / ">" / "<=" / ">=" / "instanceof" / "in"
 RelationalExpressionNoIn 	= 	ShiftExpression ( RelationalNoInOperator ShiftExpression )*
-RelationalNoInOperator 	= 	( "<" / ">" / "<=" / ">=" / "instanceof" )
-EqualityExpression 	= 	RelationalExpression ( EqualityOperator RelationalExpression )*
-EqualityExpressionNoIn 	= 	RelationalExpressionNoIn ( EqualityOperator RelationalExpressionNoIn )*
-EqualityOperator 	= 	( "==" / "!=" / "===" / "!==" )
-BitwiseANDExpression 	= 	EqualityExpression ( BitwiseANDOperator EqualityExpression )*
+RelationalNoInOperator 		= 	"<" / ">" / "<=" / ">=" / "instanceof"
+EqualityExpression 			= 	RelationalExpression ( EqualityOperator RelationalExpression )*
+EqualityExpressionNoIn 		= 	RelationalExpressionNoIn ( EqualityOperator RelationalExpressionNoIn )*
+EqualityOperator 				= 	"==" / "!=" / "===" / "!=="
+BitwiseANDExpression 		= 	EqualityExpression ( BitwiseANDOperator EqualityExpression )*
 BitwiseANDExpressionNoIn 	= 	EqualityExpressionNoIn ( BitwiseANDOperator EqualityExpressionNoIn )*
-BitwiseANDOperator 	= 	"&"
-BitwiseXORExpression 	= 	BitwiseANDExpression ( BitwiseXOROperator BitwiseANDExpression )*
+BitwiseANDOperator 			= 	"&"
+BitwiseXORExpression 		= 	BitwiseANDExpression ( BitwiseXOROperator BitwiseANDExpression )*
 BitwiseXORExpressionNoIn 	= 	BitwiseANDExpressionNoIn ( BitwiseXOROperator BitwiseANDExpressionNoIn )*
-BitwiseXOROperator 	= 	"^"
-BitwiseORExpression 	= 	BitwiseXORExpression ( BitwiseOROperator BitwiseXORExpression )*
+BitwiseXOROperator 			= 	"^"
+BitwiseORExpression 			= 	BitwiseXORExpression ( BitwiseOROperator BitwiseXORExpression )*
 BitwiseORExpressionNoIn 	= 	BitwiseXORExpressionNoIn ( BitwiseOROperator BitwiseXORExpressionNoIn )*
-BitwiseOROperator 	= 	"|"
-LogicalANDExpression 	= 	BitwiseORExpression ( LogicalANDOperator BitwiseORExpression )*
+BitwiseOROperator 			= 	"|"
+LogicalANDExpression 		= 	BitwiseORExpression ( LogicalANDOperator BitwiseORExpression )*
 LogicalANDExpressionNoIn 	= 	BitwiseORExpressionNoIn ( LogicalANDOperator BitwiseORExpressionNoIn )*
-LogicalANDOperator 	= 	"&&"
-LogicalORExpression 	= 	LogicalANDExpression ( LogicalOROperator LogicalANDExpression )*
+LogicalANDOperator 			= 	"&&"
+LogicalORExpression 			= 	LogicalANDExpression ( LogicalOROperator LogicalANDExpression )*
 LogicalORExpressionNoIn 	= 	LogicalANDExpressionNoIn ( LogicalOROperator LogicalANDExpressionNoIn )*
-LogicalOROperator 	= 	"||"
-ConditionalExpression 	= 	LogicalORExpression ( "?" AssignmentExpression ":" AssignmentExpression )?
+LogicalOROperator 			= 	"||"
+ConditionalExpression 		= 	LogicalORExpression ( "?" AssignmentExpression ":" AssignmentExpression )?
 ConditionalExpressionNoIn 	= 	LogicalORExpressionNoIn ( "?" AssignmentExpression ":" AssignmentExpressionNoIn )?
 
 AssignmentExpression 		= 	
@@ -206,7 +218,7 @@ AssignmentExpressionNoIn 	=
 		{ return { tag:"assignmentNoIn", left:l, operator:op, right:r}; }
 	/	ConditionalExpressionNoIn
 
-AssignmentOperator 	= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
+AssignmentOperator 			= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
 Expression 	= 	AssignmentExpression ( "," AssignmentExpression )* WsNlStream
 ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
 
@@ -217,7 +229,8 @@ Block =
 		"{" WsNlStream l:StatementList? "}" WsNlStream
 		{ return { tag:"block", value:l}; }
 
-StatementList 	= 	ss:StatementWsNl+
+StatementList 	= 	
+		ss:StatementWsNl+
 		{ return { tag:"statementList", value:ss}; }
 
 VariableStatement 	= 	
@@ -225,14 +238,16 @@ VariableStatement 	=
 		{ return {tag:"varStatement", value:l}; }
 
 // VariableDeclarationList
-VariableDeclarationListTail="," WsNlStream i:VariableDeclaration
+VariableDeclarationListTail=
+		"," WsNlStream i:VariableDeclaration
 		{ return i; }
 VariableDeclarationList =
 		h:VariableDeclaration t:VariableDeclarationListTail*
 		{ return [h].concat(t); }
 
 // VariableDeclarationListNoIn
-VariableDeclarationListNoInTail="," WsNlStream i:VariableDeclarationNoIn
+VariableDeclarationListNoInTail=
+		"," WsNlStream i:VariableDeclarationNoIn
 		{ return i;}
 VariableDeclarationListNoIn = 
 		h:VariableDeclarationNoIn t:VariableDeclarationListNoInTail*
@@ -265,28 +280,51 @@ IfStatement 	=
 	/	"if" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream truebr:StatementWsNl
 		{ return { tag:"if", condition:e, truebr:truebr, falsebr:null}; }
 
-IterationStatement 	= 	( "do" StatementWsNl "while" "(" Expression ")" ( ";" )? )
-	/ 	( "while" "(" Expression ")" StatementWsNl )
-	/ 	( "for" "(" ( ExpressionNoIn )? ";" ( Expression )? ";" ( Expression )? ")" StatementWsNl )
-	/ 	( "for" "(" "var" VariableDeclarationList ";" ( Expression )? ";" ( Expression )? ")" StatementWsNl )
-	/ 	( "for" "(" "var" VariableDeclarationNoIn "in" Expression ")" StatementWsNl )
-	/ 	( "for" "(" LeftHandSideExpressionForIn "in" Expression ")" StatementWsNl )
-ContinueStatement 	= 	"continue" ( Identifier )? ( ";" )?
-BreakStatement 	= 	"break" ( Identifier )? ( ";" )?
+IterationStatement 	= 	
+		"do" WsNlStream StatementWsNl "while" WsNlStream "(" WsNlStream Expression ")" WsNlStream  (";" WsNlStream)? 
+	/ 	"while" WsNlStream "(" WsNlStream Expression ")" WsNlStream StatementWsNl
+	/ 	"for" WsNlStream "(" WsNlStream ExpressionNoIn? ";" WsNlStream Expression? ";" WsNlStream Expression? ")" WsNlStream StatementWsNl
+	/ 	"for" WsNlStream "(" WsNlStream "var" WsNlStream VariableDeclarationList ";" WsNlStream Expression? ";" WsNlStream Expression? ")" WsNlStream StatementWsNl
+	/ 	"for" WsNlStream "(" WsNlStream "var" WsNlStream VariableDeclarationNoIn "in" WsNlStream Expression ")" WsNlStream StatementWsNl
+	/ 	"for" WsNlStream "(" WsNlStream LeftHandSideExpressionForIn "in" WsNlStream Expression ")" WsNlStream StatementWsNl
 
-ReturnStatement 	= 	"return" WsNlStream e:Expression? ";"? WsNlStream
+ContinueStatement = 	
+		"continue" WsNlStream id:Identifier? (";" WsNlStream)?
+		{ return { tag: "continue", id:id}; }
+
+BreakStatement 	= 	
+		"break" WsNlStream id:Identifier? (";" WsNlStream)?
+		{ return { tag: "break", id:id}; }
+
+ReturnStatement 	= 	
+		"return" WsNlStream e:Expression? (";" WsNlStream)?
 		{ return { tag:"return", value:e }; }
 
-WithStatement 	= 	"with" "(" Expression ")" StatementWsNl
-SwitchStatement 	= 	"switch" "(" Expression ")" CaseBlock
+WithStatement 		= 	
+		"with" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream s:StatementWsNl
+		{ return { tag:"with", expression:e, code:s }; }
+
+SwitchStatement 	= 	
+		"switch" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream c:CaseBlock
+		{ return { tag:"switch", expression:e, cases:c }; }
+
 CaseBlock 	= 	"{" ( CaseClauses )? ( "}" / DefaultClause ( CaseClauses )? "}" )
+
 CaseClauses 	= 	( CaseClause )+
+
 CaseClause 	= 	( ( "case" Expression ":" ) ) ( StatementList )?
+
 DefaultClause 	= 	( ( "default" ":" ) ) ( StatementList )?
-LabelledStatement 	= 	Identifier ":" StatementWsNl
+
+LabelledStatement 	= 	i:Identifier ":" s:StatementWsNl
+		{ return { tag:"labelled", id:i, statement:s}; }
+
 ThrowStatement 	= 	"throw" Expression ( ";" )?
+
 TryStatement 	= 	"try" Block ( ( Finally / Catch ( Finally )? ) )
+
 Catch 	= 	"catch" "(" Identifier ")" Block
+
 Finally 	= 	"finally" Block
 
 
