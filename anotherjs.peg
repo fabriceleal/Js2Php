@@ -8,9 +8,11 @@ start				= Program
 Program			= SourceElements
 SourceElements = SourceElement*
 SourceElement 	= FunctionDeclaration / StatementWsNl
-Statement 		= Block / VariableStatement / EmptyStatement / LabelledStatement / ReturnStatement / IfStatement
-						/ ExpressionStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
-						/ 	WithStatement / SwitchStatement / ThrowStatement / TryStatement
+Statement 		= 
+		Block / VariableStatement / EmptyStatement / LabelledStatement / 
+		ReturnStatement / SwitchStatement / IfStatement / /* TODO This one should be the last ... test this*/ ExpressionStatement / 
+		IterationStatement / ContinueStatement / BreakStatement / ImportStatement /
+		WithStatement / ThrowStatement / TryStatement
 
 /*
 Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionStatement
@@ -188,7 +190,6 @@ MultiplicativeOperator 		= 	"*" / "/" / "%"
 
 // Additive
 AdditiveExpression 			= 	MultiplicativeExpression (AdditiveOperator MultiplicativeExpression)*
-
 AdditiveOperator 				= 	"+" / "-"
 
 // Shift
@@ -200,7 +201,6 @@ RelationalExpression 		= 	ShiftExpression (RelationalOperator ShiftExpression)*
 RelationalOperator 			= 	"<" / ">" / "<=" / ">=" / "instanceof" / "in"
 
 RelationalExpressionNoIn 	= 	ShiftExpression (RelationalNoInOperator ShiftExpression)*
-
 RelationalNoInOperator 		= 	"<" / ">" / "<=" / ">=" / "instanceof"
 
 // Equality
@@ -218,25 +218,19 @@ EqualityOperator 				= 	"==" / "!=" / "===" / "!=="
 
 // ...
 BitwiseANDExpression 		= 	EqualityExpression (BitwiseANDOperator EqualityExpression)*
-
 BitwiseANDExpressionNoIn 	= 	EqualityExpressionNoIn (BitwiseANDOperator EqualityExpressionNoIn)*
-
 BitwiseANDOperator 			= 	"&"
 
 // ...
 BitwiseXORExpression 		= 	BitwiseANDExpression (BitwiseXOROperator BitwiseANDExpression)*
-
 BitwiseXORExpressionNoIn 	= 	BitwiseANDExpressionNoIn (BitwiseXOROperator BitwiseANDExpressionNoIn)*
-
-
 BitwiseXOROperator 			= 	"^"
 
 // ...
 BitwiseORExpression 			= 	BitwiseXORExpression (BitwiseOROperator BitwiseXORExpression)*
-
 BitwiseORExpressionNoIn 	= 	BitwiseXORExpressionNoIn (BitwiseOROperator BitwiseXORExpressionNoIn)*
-
 BitwiseOROperator 			= 	"|"
+
 
 // LogicalAND
 LogicalANDExpression 		= 	
@@ -251,6 +245,7 @@ LogicalANDExpressionNoIn 	=
 
 LogicalANDOperator 			= 	"&&"
 
+
 // LogicalOR
 LogicalORExpression 			= 	
 		LogicalANDExpression LogicalOROperator LogicalANDExpression
@@ -264,9 +259,28 @@ LogicalORExpressionNoIn 	=
 
 LogicalOROperator 			= 	"||"
 
-// ...
-ConditionalExpression 		= 	LogicalORExpression ( "?" AssignmentExpression ":" AssignmentExpression )?
-ConditionalExpressionNoIn 	= 	LogicalORExpressionNoIn ( "?" AssignmentExpression ":" AssignmentExpressionNoIn )?
+
+// Conditional Expression
+ConditionalExpressionTail  = "?" WsNlStream ctrue:AssignmentExpression ":" WsNlStream cfalse:AssignmentExpression
+		{ return { ctrue: ctrue, cfalse: cfalse }; }
+ConditionalExpression 		= 	e:LogicalORExpression t:ConditionalExpressionTail?
+		{
+			if(t){
+				return { tag:"conditionalExpression", expression:e, seq:t };
+			}
+			return e;
+		}
+
+// Conditional Expression NoIn
+ConditionalExpressionNoInTail =  "?" WsNlStream ctrue:AssignmentExpression /* FIXME? not NoIn here??? */ ":" WsNlStream cfalse: AssignmentExpressionNoIn
+		{ return { ctrue: ctrue, cfalse: cfalse }; }
+ConditionalExpressionNoIn 	= 	e:LogicalORExpressionNoIn t:ConditionalExpressionNoInTail?
+		{
+			if(t){
+				return { tag:"conditionalExpressionNoIn", expression:e, seq:t };
+			}
+			return e;
+		}
 
 // Assignment
 AssignmentExpression 		= 	
@@ -371,13 +385,24 @@ SwitchStatement 	=
 		"switch" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream c:CaseBlock
 		{ return { tag:"switch", expression:e, cases:c }; }
 
-CaseBlock 	= 	"{" ( CaseClauses )? ( "}" / DefaultClause ( CaseClauses )? "}" )
+CaseBlockTail = 
+		"}" WsNlStream
+		{ return []; }
+	/	h:DefaultClause t:CaseClauses? "}" WsNlStream
+		{ return [h].concat(t); }
+	
 
-CaseClauses 	= 	( CaseClause )+
+CaseBlock 	= 	"{" WsNlStream h:CaseClauses? t:CaseBlockTail
+		{ return h.concat(t); }
 
-CaseClause 	= 	( ( "case" Expression ":" ) ) ( StatementList )?
 
-DefaultClause 	= 	( ( "default" ":" ) ) ( StatementList )?
+CaseClauses 	= 	CaseClause+
+		
+CaseClause 	= 	"case" WsNlStream e:Expression ":" WsNlStream code:StatementList?
+		{ return { tag:"caseClause", code:code}; }
+
+DefaultClause 	= 	"default" WsNlStream ":"  WsNlStream code:StatementList?
+		{ return { tag:"defaultClause", code:code}; }
 
 LabelledStatement = 	
 		i:Identifier ":" s:StatementWsNl
@@ -385,7 +410,7 @@ LabelledStatement =
 
 ThrowStatement	=
 		"throw" e:Expression ";"?
-		{ return { tag:"throw", value:e}}
+		{ return { tag:"throw", value:e}; }
 
 TryStatement 	= 	
 		"try" WsNlStream b:Block c:Catch f:Finally
