@@ -605,12 +605,12 @@ ConditionalExpressionNoIn 	= 	e:LogicalORExpressionNoIn t:ConditionalExpressionN
 
 // Assignment
 AssignmentExpression 		= 	
-		l:LeftHandSideExpression op:AssignmentOperator r:AssignmentExpression 
+		l:LeftHandSideExpression op:AssignmentOperator WsNlStream r:AssignmentExpression 
 		{ return { tag:"assignment", left:l, operator:op, right:r}; }
 	/ 	ConditionalExpression
 
 AssignmentExpressionNoIn 	= 	
-		l:LeftHandSideExpression op:AssignmentOperator r:AssignmentExpressionNoIn 
+		l:LeftHandSideExpression op:AssignmentOperator WsNlStream r:AssignmentExpressionNoIn 
 		{ return { tag:"assignmentNoIn", left:l, operator:op, right:r}; }
 	/	ConditionalExpressionNoIn
 
