@@ -297,7 +297,7 @@ ShiftExpression 				=
 			})(all);
 		}
 
-ShiftOperator 					= 	"<<" / ">>" / ">>>"
+ShiftOperator 					= 	">>>" / "<<" / ">>"
 
 // Relational
 RelationalExpression 		= 	
@@ -324,7 +324,7 @@ RelationalExpression 		=
 		}
 
 
-RelationalOperator 			= 	"<" / ">" / "<=" / ">=" / "instanceof" / "in"
+RelationalOperator 			= 	"instanceof" / "in" / "<=" / ">=" / "<" / ">"
 
 RelationalExpressionNoIn 	= 	
 		head:ShiftExpression tail:(RelationalNoInOperator WsNlStream RelationalExpressionNoIn)*
@@ -349,7 +349,7 @@ RelationalExpressionNoIn 	=
 			})(all);
 		}
 
-RelationalNoInOperator 		= 	"<" / ">" / "<=" / ">=" / "instanceof"
+RelationalNoInOperator 		= 	"instanceof" / "<=" / ">=" / "<" / ">"
 
 /*
 	EqualityExpression
@@ -403,7 +403,7 @@ EqualityExpressionNoIn 		=
 			})(all);
 		}
 
-EqualityOperator 				= 	"==" / "!=" / "===" / "!=="
+EqualityOperator 				= 	"===" / "!==" / "==" / "!="
 
 
 BitwiseANDExpression 		= 	
@@ -575,7 +575,7 @@ LogicalANDOperator 			= 	"&&"
 
 // LogicalOR
 LogicalORExpression 			= 	
-		LogicalANDExpression LogicalOROperator WsNlStream LogicalORExpression
+		left:LogicalANDExpression op:LogicalOROperator WsNlStream right:LogicalORExpression
 		{ return { tag:"or", left:left, op:op, right:right}; }
 	/	LogicalANDExpression
 
@@ -620,7 +620,7 @@ AssignmentExpressionNoIn 	=
 		{ return { tag:"assignmentNoIn", left:l, operator:op, right:r}; }
 	/	ConditionalExpressionNoIn
 
-AssignmentOperator 			= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
+AssignmentOperator 			= 	"*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/=" / "="
 
 // ...
 Expression 	= 	
