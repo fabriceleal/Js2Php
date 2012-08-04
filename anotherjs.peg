@@ -5,9 +5,15 @@
 
 start				= Program
 
-Program			= SourceElements
-SourceElements = SourceElement*
-SourceElement 	= Comment / FunctionDeclaration / StatementWsNl
+Program			= 
+		WsNlStream ses:SourceElements
+		{ return ses; }
+
+SourceElements = 
+		SourceElement*
+
+SourceElement 	= 
+		Comment / FunctionDeclaration / StatementWsNl
 
 Comment = 
 		"/*" value:(!"*/" .)* "*/" WsNlStream
