@@ -8,5 +8,5 @@ final=js.js newjs.js
 #	pegjs -e exports.parser newjs.peg
 
 anotherjs.js: anotherjs.peg
-	pegjs -e exports.parser --track-line-and-column anotherjs.peg
+	pegjs --export-var exports.parser --track-line-and-column --cache anotherjs.peg
 

@@ -10,10 +10,10 @@ SourceElements = SourceElement*
 SourceElement 	= Comment / FunctionDeclaration / StatementWsNl
 
 Comment = 
-		"/*" (!"*/" .)* "*/" WsNlStream
-		{ return { tag:"empty"} }
-	/	"//" (!Nl .)* Nl
-		{ return { tag:"empty"} }
+		"/*" value:(!"*/" .)* "*/" WsNlStream
+		{ return { tag:"COMMENT", value:value.map(function(a){ return a.join('')}).join('')} }
+	/	"//" value:(!Nl .)* (Nl WsNlStream)?
+		{ return { tag:"COMMENT", value:value.map(function(a){ return a.join('')}).join('')} }
 
 Statement 		= 
 		Block / VariableStatement / EmptyStatement / LabelledStatement / 
@@ -97,7 +97,7 @@ REGULAR_EXPRESSION_LITERAL	= "blah"
 HEX_DIGIT						= [A-F0-9]
 DECIMAL_DIGIT					= [0-9]
 IDENTIFIER_NAME_CHAR			= IDENTIFIER_NAME_1ST_CHAR / DECIMAL_DIGIT
-IDENTIFIER_NAME_1ST_CHAR	= [a-zA-Z]
+IDENTIFIER_NAME_1ST_CHAR	= [a-zA-Z_]
 IDENTIFIER_NAME				= 
 		h:IDENTIFIER_NAME_1ST_CHAR t:IDENTIFIER_NAME_CHAR*
 		{ return [h].concat(t).join(''); }
