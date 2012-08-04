@@ -7,12 +7,19 @@ start				= Program
 
 Program			= SourceElements
 SourceElements = SourceElement*
-SourceElement 	= FunctionDeclaration / StatementWsNl
+SourceElement 	= Comment / FunctionDeclaration / StatementWsNl
+
+Comment = 
+		"/*" (!"*/" .)* "*/" WsNlStream
+		{ return { tag:"empty"} }
+	/	"//" (!Nl .)* Nl
+		{ return { tag:"empty"} }
+
 Statement 		= 
 		Block / VariableStatement / EmptyStatement / LabelledStatement / 
-		ReturnStatement / SwitchStatement / IfStatement / /* TODO This one should be the last ... test this*/ ExpressionStatement / 
+		ReturnStatement / SwitchStatement / IfStatement  / 
 		IterationStatement / ContinueStatement / BreakStatement / ImportStatement /
-		WithStatement / ThrowStatement / TryStatement
+		WithStatement / ThrowStatement / TryStatement / /* TODO This one should be the last ... test this*/ ExpressionStatement
 
 /*
 Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionStatement
@@ -22,11 +29,11 @@ Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionState
 
 
 FunctionDeclaration =
-		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody ";"? WsNlStream
+		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody ";"? WsNlStream
 		{ return { tag:"functionDecl", name:id, pars:pars, body:body}; }
 
 FunctionExpression =
-		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList ")" WsNlStream body:FunctionBody
+		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody
 		{ return { tag:"functionExpr", name:id, pars:pars, body:body}; }
 
 
@@ -49,6 +56,7 @@ ExpressionStatement =
 PrimaryExpression = 
 		"this" WsNlStream
 		{ return { tag:"thisRef"}; }
+	/	FunctionExpression
 	/ 	ObjectLiteral
 	/ 	"(" WsNlStream e:Expression WsNlStream ")" WsNlStream
 		{ return e; }
@@ -138,14 +146,25 @@ PropertyName 	=
 	/ 	DECIMAL_LITERAL
 
 MemberExpression 	= 	
-		( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
+		head:( FunctionExpression / PrimaryExpression ) value:MemberExpressionPart*
+		{ 
+			if(value && value.length > 0)
+				return { tag:"memberExpr", head: head, value:value}; 
+			return head;
+		}
 	/ 	AllocationExpression
 
 MemberExpressionForIn 	= 	
-		( ( FunctionExpression / PrimaryExpression ) ( MemberExpressionPart )* )
+		head:( FunctionExpression / PrimaryExpression ) tail:MemberExpressionPart*
+		{ 
+			if(value && value.length > 0)
+				return { tag:"memberExprForIn", head: head, value:value}; 
+			return head;
+		}
 
 AllocationExpression 	= 	
-		( "new" MemberExpression ( ( Arguments ( MemberExpressionPart )* )* ) )
+		"new" head:MemberExpression tail:( Arguments MemberExpressionPart* )*
+		{ return {tag :"allocation", head:head, tail:tail}; }
 
 MemberExpressionPart 	= 	
 		"[" WsNlStream e:Expression "]" WsNlStream
@@ -153,8 +172,11 @@ MemberExpressionPart 	=
 	/ 	"." WsNlStream id:Identifier
 		{ return { tag:"memberExpressionPartDot", value: id}; }
 
-CallExpression = 	MemberExpression Arguments CallExpressionPart*
-CallExpressionForIn = MemberExpressionForIn Arguments CallExpressionPart*
+CallExpression = 	head:(MemberExpression) args:Arguments rec:CallExpressionPart*
+		{ return { tag:"call", head:head, args:args, rec:rec}; }
+
+CallExpressionForIn = head:(MemberExpressionForIn) args:Arguments rec:CallExpressionPart*
+		{ return { tag:"callForIn", head:head, args:args, rec:rec}; }
 
 CallExpressionPart = 	
 		a:Arguments
@@ -179,67 +201,366 @@ ArgumentList =
 LeftHandSideExpression 			= CallExpression / MemberExpression
 LeftHandSideExpressionForIn 	= CallExpressionForIn / MemberExpressionForIn
 
-PostfixExpression 			= 	LeftHandSideExpression PostfixOperator?
+
+PostfixExpression 			= 	
+		head:LeftHandSideExpression tail:PostfixOperator?
+		{ if(tail) return { tag:"postfix", head:head, tail:tail}; return head; }
+
 PostfixOperator 				= 	"++" / "--"
-UnaryExpression 				= 	( PostfixExpression / ( UnaryOperator UnaryExpression )+ )
+UnaryExpression 				= 	
+		PostfixExpression 
+	/ (UnaryOperator UnaryExpression)+
+
 UnaryOperator 					= 	"delete" / "void" / "typeof" / "++" / "--" / "+" / "-" / "~" / "!"
 
-// Multiplicative
-MultiplicativeExpression 	= 	UnaryExpression ( MultiplicativeOperator UnaryExpression )*
+/*
+	Multiplicative 
+*/
+MultiplicativeExpression 	= 	
+		head:UnaryExpression tail:(MultiplicativeOperator WsNlStream MultiplicativeExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "mult", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
 MultiplicativeOperator 		= 	"*" / "/" / "%"
 
 // Additive
-AdditiveExpression 			= 	MultiplicativeExpression (AdditiveOperator MultiplicativeExpression)*
+AdditiveExpression 			= 
+		head:MultiplicativeExpression tail:(AdditiveOperator WsNlStream AdditiveExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "add", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
 AdditiveOperator 				= 	"+" / "-"
 
 // Shift
-ShiftExpression 				= 	AdditiveExpression (ShiftOperator AdditiveExpression)*
+ShiftExpression 				= 	
+		head:AdditiveExpression tail:(ShiftOperator WsNlStream ShiftExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "shift", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
 ShiftOperator 					= 	"<<" / ">>" / ">>>"
 
 // Relational
-RelationalExpression 		= 	ShiftExpression (RelationalOperator ShiftExpression)*
+RelationalExpression 		= 	
+		head:ShiftExpression tail:(RelationalOperator WsNlStream RelationalExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "relational", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
 RelationalOperator 			= 	"<" / ">" / "<=" / ">=" / "instanceof" / "in"
 
-RelationalExpressionNoIn 	= 	ShiftExpression (RelationalNoInOperator ShiftExpression)*
+RelationalExpressionNoIn 	= 	
+		head:ShiftExpression tail:(RelationalNoInOperator WsNlStream RelationalExpressionNoIn)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "relationalNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
 RelationalNoInOperator 		= 	"<" / ">" / "<=" / ">=" / "instanceof"
 
-// Equality
+/*
+	EqualityExpression
+*/
 EqualityExpression 			= 	
-		left:RelationalExpression op:EqualityOperator right:RelationalExpression
-		{ return { tag:"eq", left:left, op:op, right:right}; }
-	/	RelationalExpression
+		head:RelationalExpression tail:(EqualityOperator WsNlStream EqualityExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
 
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "equality", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+/*
+	EqualityExpressionNoIn
+*/
 EqualityExpressionNoIn 		= 	
-		left:RelationalExpressionNoIn op:EqualityOperator right:RelationalExpressionNoIn
-		{ return { tag:"eqNoIn", left:left, op:op, right:right}; }
-	/	RelationalExpressionNoIn
+		head:RelationalExpressionNoIn tail:(EqualityOperator WsNlStream EqualityExpressionNoIn)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "equalityNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
 
 EqualityOperator 				= 	"==" / "!=" / "===" / "!=="
 
-// ...
-BitwiseANDExpression 		= 	EqualityExpression (BitwiseANDOperator EqualityExpression)*
-BitwiseANDExpressionNoIn 	= 	EqualityExpressionNoIn (BitwiseANDOperator EqualityExpressionNoIn)*
+
+BitwiseANDExpression 		= 	
+		head:EqualityExpression tail:(BitwiseANDOperator WsNlStream BitwiseANDExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitAnd", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
+BitwiseANDExpressionNoIn 	= 	
+		head:EqualityExpressionNoIn tail:(BitwiseANDOperator WsNlStream BitwiseANDExpressionNoIn)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitAndNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
 BitwiseANDOperator 			= 	"&"
 
-// ...
-BitwiseXORExpression 		= 	BitwiseANDExpression (BitwiseXOROperator BitwiseANDExpression)*
-BitwiseXORExpressionNoIn 	= 	BitwiseANDExpressionNoIn (BitwiseXOROperator BitwiseANDExpressionNoIn)*
+
+BitwiseXORExpression 		= 	
+		head:BitwiseANDExpression tail:(BitwiseXOROperator WsNlStream BitwiseXORExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitXor", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
+BitwiseXORExpressionNoIn 	= 	
+		head:BitwiseANDExpressionNoIn tail:(BitwiseXOROperator WsNlStream BitwiseXORExpressionNoIn)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitXorNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
 BitwiseXOROperator 			= 	"^"
 
-// ...
-BitwiseORExpression 			= 	BitwiseXORExpression (BitwiseOROperator BitwiseXORExpression)*
-BitwiseORExpressionNoIn 	= 	BitwiseXORExpressionNoIn (BitwiseOROperator BitwiseXORExpressionNoIn)*
+
+BitwiseORExpression 			= 	
+		head:BitwiseXORExpression tail:(BitwiseOROperator WsNlStream BitwiseORExpression)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitOr", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+
+BitwiseORExpressionNoIn 	= 	
+		head:BitwiseXORExpressionNoIn tail:(BitwiseOROperator WsNlStream BitwiseORExpressionNoIn)*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "bitOrNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
 BitwiseOROperator 			= 	"|"
 
 
 // LogicalAND
+
 LogicalANDExpression 		= 	
-		left:BitwiseORExpression op:LogicalANDOperator right:BitwiseORExpression
+		left:BitwiseORExpression op:LogicalANDOperator WsNlStream right:LogicalANDExpression
 		{ return { tag:"and", left:left, op:op, right:right}; }
 	/	BitwiseORExpression
 
 LogicalANDExpressionNoIn 	= 	
-		left:BitwiseORExpressionNoIn op:LogicalANDOperator right:BitwiseORExpressionNoIn
+		left:BitwiseORExpressionNoIn op:LogicalANDOperator WsNlStream right:LogicalANDExpressionNoIn
 		{ return { tag:"andNoIn", left:left, op:op, right:right}; }
 	/	BitwiseORExpressionNoIn
 
@@ -248,12 +569,12 @@ LogicalANDOperator 			= 	"&&"
 
 // LogicalOR
 LogicalORExpression 			= 	
-		LogicalANDExpression LogicalOROperator LogicalANDExpression
+		LogicalANDExpression LogicalOROperator WsNlStream LogicalORExpression
 		{ return { tag:"or", left:left, op:op, right:right}; }
 	/	LogicalANDExpression
 
 LogicalORExpressionNoIn 	= 	
-		left:LogicalANDExpressionNoIn op:LogicalOROperator right:LogicalANDExpressionNoIn
+		left:LogicalANDExpressionNoIn op:LogicalOROperator WsNlStream right:LogicalORExpressionNoIn
 		{ return { tag:"orNoIn", left:left, op:op, right:right}; }
 	/	LogicalANDExpressionNoIn
 
@@ -296,8 +617,51 @@ AssignmentExpressionNoIn 	=
 AssignmentOperator 			= 	"=" / "*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/="
 
 // ...
-Expression 	= 	AssignmentExpression ( "," AssignmentExpression )* WsNlStream
-ExpressionNoIn 	= 	AssignmentExpressionNoIn ( "," AssignmentExpressionNoIn )*
+Expression 	= 	
+		head:AssignmentExpression tail:("," WsNlStream AssignmentExpression)* 
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "comma", left:all[0], op: all[1], right:right };
+			})(all);
+		}
+
+ExpressionNoIn 	= 	
+		head:AssignmentExpressionNoIn tail:( "," WsNlStream AssignmentExpressionNoIn )*
+		{
+			// if there is no tail, return immediatly the tail
+			if(tail.length === 0)
+				return head;
+
+			// merge the head and the tail into a single flatten'ed array
+			var all = [head];
+			tail.forEach(function(a){ all = all.concat(a)});
+			
+			// Nest tails in the right operand of the add
+			return (function _fold(t){
+				var right = null;
+				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = all[3];
+				else
+					right = _fold(all.slice(4));
+
+				return {	tag: "commaNoIn", left:all[0], op: all[1], right:right };
+			})(all);
+		}
 
 StatementWsNl = s:Statement WsNlStream
 		{ return s; }
@@ -442,5 +806,7 @@ Name 	= 	h:IDENTIFIER_NAME t:NameTail*
 
 
 WsNlStream=WsNl*
-WsNl= "\r" / "\n" / "\r\n" / [ \w\t]
+WsNl= Ws / Nl
+Ws = [ \w\t]
+Nl = "\r" / "\n" / "\r\n"
 
