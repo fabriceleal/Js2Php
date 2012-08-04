@@ -230,12 +230,12 @@ MultiplicativeExpression 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "mult", left:all[0], op: all[1], right:right };
+				return {	tag: "mult", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -256,12 +256,12 @@ AdditiveExpression 			=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "add", left:all[0], op: all[1], right:right };
+				return {	tag: "add", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -282,12 +282,12 @@ ShiftExpression 				=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "shift", left:all[0], op: all[1], right:right };
+				return {	tag: "shift", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -308,12 +308,12 @@ RelationalExpression 		=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "relational", left:all[0], op: all[1], right:right };
+				return {	tag: "relational", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -334,12 +334,12 @@ RelationalExpressionNoIn 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "relationalNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "relationalNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -362,12 +362,12 @@ EqualityExpression 			=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "equality", left:all[0], op: all[1], right:right };
+				return {	tag: "equality", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -388,12 +388,12 @@ EqualityExpressionNoIn 		=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "equalityNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "equalityNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -414,12 +414,12 @@ BitwiseANDExpression 		=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitAnd", left:all[0], op: all[1], right:right };
+				return {	tag: "bitAnd", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -438,12 +438,12 @@ BitwiseANDExpressionNoIn 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitAndNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "bitAndNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -465,12 +465,12 @@ BitwiseXORExpression 		=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitXor", left:all[0], op: all[1], right:right };
+				return {	tag: "bitXor", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -489,12 +489,12 @@ BitwiseXORExpressionNoIn 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitXorNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "bitXorNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -516,12 +516,12 @@ BitwiseORExpression 			=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitOr", left:all[0], op: all[1], right:right };
+				return {	tag: "bitOr", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -540,12 +540,12 @@ BitwiseORExpressionNoIn 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "bitOrNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "bitOrNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -631,12 +631,12 @@ Expression 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "comma", left:all[0], op: all[1], right:right };
+				return {	tag: "comma", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
@@ -654,12 +654,12 @@ ExpressionNoIn 	=
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
 				var right = null;
-				if(all.length === 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
-					right = all[3];
+				if(t.length <= 4) // 0: head (left operand), 1: operator, 2: whitespaces, 3:right operand
+					right = t[3];
 				else
-					right = _fold(all.slice(4));
+					right = _fold(t.slice(4));
 
-				return {	tag: "commaNoIn", left:all[0], op: all[1], right:right };
+				return {	tag: "commaNoIn", left:t[0], op: t[1], right:right };
 			})(all);
 		}
 
