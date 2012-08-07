@@ -1,4 +1,4 @@
-test.*
+test*.*
 newjs.js
 anotherjs.js
 *.bak

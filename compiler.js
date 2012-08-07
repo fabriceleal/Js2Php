@@ -1,135 +1,107 @@
 (function(){
 
-	var compileToString = function(isTopLevel){
-		return function(value){
-			return value + (isTopLevel ? ';\n' : '');
-		};
-	};
+	var auxDispatchToValue = function(is_top_level){ return function(expr){ return expr.value ? compile(is_top_level)(expr.value) : ''; }};
+	var auxJsonStringify = function(is_top_level){ return function(expr){ return JSON.stringify(expr.value);}};
 
-	var compileLet = function(isTopLevel){
-		return function(tree){
-			var ret = compile(false)(tree.id) + ' = ' + compile(false)(tree.value);
+	var compilers = {
+		'id' : function(is_top_level){
+			return function(expr){
+				if(is_top_level === true) console.warn('id does not support is_top_level === true');
 
-			if(isTopLevel) ret += ';';
+				return '$' + expr.name;
+			};
+		},
+		'varStatement' : function(is_top_level){
+			return function(expr){
+				if(is_top_level === false) console.warn('varStatement does not support is_top_level === false');
 
-			return ret;
-		};
-	};
+				/*
+				 Var Statement can hold several vars. Php doesnt have var declaration, 
+				so we will generate instructions to init them to null
+				*/
 
-	var compileObjLiteral = function(isTopLevel){
-		return function(tree){
-			var ret = 'new JsObject(array(' + tree.value.map(compile(false)).join(', ') + '))';
+				var ret = expr.value.map(function(d){
+					return compile(false)(d.name) + ' = ' + (d.init ? compile(false)(d.init) : 'null') + ';\n';
+				}).join('');
 
-			if(isTopLevel) ret += ';';
-
-			return ret;
-		};
-	};
-
-	var compileArrayLiteral = function(isTopLevel){
-		return function(tree){
-			var ret = 'array(' + tree.value.map(compile(false)).join(', ') + ')';
-
-			if(isTopLevel) ret += ';';
-
-			return ret;
-		};
-	};
-
-	var compileFunction = function(isTopLevel){
-		return function(tree){
-			var ret = 'new JsFunction(function ( $___this ' ;
-			if(tree.args.length > 0){
-				ret += ', ';
-				ret += tree.args.map(function(e){ return compile(false)(e) + ' = null' }).join(', ');
+				return ret;
 			}
-			ret += ')' 
-			if(tree.hasOwnProperty('captured') && tree.captured !== null && tree.captured.length > 0){
-				ret += ' use (' + tree.captured.map(function(e){ return '$'+ e; }).join(', ') + ')';
+		},
+		// Just dispatch to the value ...
+		'expression': auxDispatchToValue,
+		'literal'	: auxDispatchToValue,
+		'arguments' : function(is_top_level){
+			return function(expr){
+				if(expr.value){
+					return expr.value.map(compile(false)).join(', ');
+				}
+				return '';
+			};
+		},
+		'assignment': function(is_top_level){
+			return function(expr){
+				return compile(false)(expr.left) + ' ' + expr.operator + ' ' + compile(false)(expr.right) + (is_top_level ? ';\n' : '');
+			};
+		},
+		'string_literal': auxJsonStringify,
+		'number_literal': auxJsonStringify,
+		'call': function(is_top_level){
+			return function(expr){
+				return compile(false)(expr.head) + '(' + compile(false)(expr.args) + ')' + (is_top_level ? ';\n' : ''); 
 			}
-			ret += '{';
-			ret += compile(true)(tree.body);
-			ret += '})';
-			return ret + (isTopLevel?';':'');
-		};
-	};
+		},
+		'memberExpressionPartDot' : function(is_top_level){
+			return function(expr){
+				if(expr.value.tag !== 'id') console.err('memberExpressionPartDot does not support values with tag ' + expr.value.tag);
 
-	var compileToPhp = function(tree){
-		with(require('./preparse.js')){
-			preParse(tree);
+				return '->' + expr.value.name;
+			};
+		},
+		'memberExpr': function(is_top_level){
+			return function(expr){
+				return compile(false)(expr.head) + expr.value.map(compile(false));
+			};
+		},
+		'add' : function(is_top_level){
+			return function(expr){				
+				if(expr.op === '+'){
+					return 'add(' + compile(false)(expr.left) + ', ' + compile(false)(expr.right) + ')';
+				}
+				
+				return compile(false)(expr.left) + ' ' + expr.op + ' ' + compile(false)(expr.right);
+			};
 		}
+	};
 
-		var ret = '';
-		ret += '<?\n';
+	var compile = function(is_top_level){
+		return function(expr){
+			if(expr instanceof Array){
+				return expr.map(compile(true)).join('');
+			}
+			var $ = compilers[expr.tag];
+			if($)
+				return $(is_top_level)(expr);
+			else{
+				console.warn('Compilation does not support: ' + expr.tag);
+				return '';
+			}
+		}
+	};
 
-		// Necessary includes
-		ret += ["JsObject.php", "JsFunction.php"].
-				map(function(i){ return 'require_once "' + i + '";\n'}).
-				join('');
-		//--
+	var compileToPhp = function(expr){
+		var ret = '<?\n';
 
-		// File's code
-		ret += compile(true)(tree);
-
+		// Add headers
+		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsAdd.php'].forEach(function(item){
+			ret += 'require_once "' + item + '";\n';
+		});
+		
+		// Compile code
+		ret += compile(true)(expr);
+		
 		ret += '\n?>';
 
 		return ret;
-	}; 
-
-	var compile = function(isTopLevel){
-		return function(tree){
-			switch(tree.tag){
-				case "fun_app":
-					var ret = compile(false)(tree.fun) + "->call(null";  
-					if(tree.args.length > 0){
-						ret += ', ' + tree.args.map(compile(false)).join(', ');
-					}
-					ret += ")" + (isTopLevel?';':'');
-					return ret;	
-				case "return":
-					return "return " + compile(false)(tree.value) + ";";
-				case "function_literal":
-					return compileFunction(false)(tree);					
-				case "parenthesis":
-					return "(" + compile(false)(tree.expression) + ")" + (isTopLevel? ';':'');
-				case "offsetable_accessor_as_arr":
-					return "[" + compile(false)(tree.offset) + "]";
-				case "offsetable_accessor_as_obj":
-					return "->" + compile(false)(tree.offset);
-				case "offsetable":
-					return compileToString(isTopLevel)(compile(false)(tree.id) + tree.offset.map(compile(false)).join('') );
-				case "object_entry":
-					// no toplevel for this one!!!
-					return compileToString(false)('"' + tree.key.name + '"') + ' => ' + compile(false)(tree.value);
-				case "object_literal":
-					return compileObjLiteral(isTopLevel)(tree);
-				case "array_literal":
-					return compileArrayLiteral(isTopLevel)(tree);
-				case "statement_collection":
-					// no toplevel for this one!
-					return tree.value.map(compile(true)).join('\n');
-				case "let_collection":
-					// no toplevel for this one!
-					return tree.value.map(compileLet(false)).join(',') + ';';
-				case "let":
-					return compileLet(isTopLevel)(tree); 
-				case "id": case "iddeclr": 
-					// no toplevel for this one!
-
-					if(tree.name === 'this') tree.name = '___this';
-
-					return "$" + compileToString(false)(tree.name.replace('$', '_'));
-				case "property_name":
-					// no toplevel for this one!					
-					return compileToString(false)(tree.name.replace('$', '_'));
-				case "number_literal":
-					return compileToString(isTopLevel)(tree.value.toString());
-				case "string_literal":
-					return compileToString(isTopLevel)('"' + tree.value.toString() + '"');
-			}
-			console.error(tree.tag);
-			throw new Error("Unexpected tag!");
-		};
 	};
 
 	exports.compile = compileToPhp;

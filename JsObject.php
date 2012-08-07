@@ -22,6 +22,10 @@
 		 }
 	  }
 
+		function __toString(){
+			return "[JsObject]";
+		}
+
 	}
 
 /*
