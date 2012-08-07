@@ -1,10 +1,61 @@
 <?
 
 /*
-	From: http://www.phpied.com/javascript-style-object-literals-in-php/
+	From: 
+		http://www.phpied.com/javascript-style-object-literals-in-php/
+		http://activedeveloper.info/prototype-based-object-oriented-programming-in-php.html
+		http://sourcemaking.com/design_patterns/prototype/php
+		http://sourcemaking.com/design_patterns/prototype/php/2
+		http://activedeveloper.info/prototype-based-object-oriented-programming-in-php.html
 */
 
-	class JsObject {
+	class Prototype {
+
+		public function __set($name, $value) {
+			$this->{$name} = $value;
+		}
+
+		public function __get($name) {
+			return $this->{$name};
+		}
+
+		public function __isset($name) {
+			return isset($this->{$name});
+		}
+
+		public function __unset($name) {
+			unset($this->{$name});
+		}
+	}
+
+	class JsObjectBase {
+
+		public $prototype = null;
+
+		public function __construct() {
+			$this->prototype = new Prototype;
+		}
+
+		public function __call($name, $arguments) {
+			array_unshift($arguments, $this);
+
+			if(is_callable($this->prototype->{$name})){				
+				return call_user_func_array($this->prototype->{$name}, $arguments);
+			}
+
+			if(is_callable($this->$name)){
+				return call_user_func_array($this->$name, $arguments);
+			}
+		}
+
+		public function __clone() {
+			$this->prototype = clone $this->prototype;
+		}
+
+		
+	}
+
+	class JsObject extends JsObjectBase {
 
 	  function __construct($members = array()) {
 		 foreach ($members as $name => $value) {
@@ -12,13 +63,6 @@
 			if($value instanceof JsFunction){
 				$value->setThis($this);
 			}
-		 }
-	  }
-
-	  function __call($name, $args) {
-		 if (is_callable($this->$name)) {
-		   array_unshift($args, $this);
-		   return call_user_func_array($this->$name, $args);
 		 }
 	  }
 
