@@ -39,12 +39,12 @@
 		public function __call($name, $arguments) {
 			array_unshift($arguments, $this);
 
-			if(is_callable($this->prototype->{$name})){				
-				return call_user_func_array($this->prototype->{$name}, $arguments);
-			}
-
 			if(is_callable($this->$name)){
 				return call_user_func_array($this->$name, $arguments);
+			}
+
+			if(is_callable($this->prototype->{$name})){				
+				return call_user_func_array($this->prototype->{$name}, $arguments);
 			}
 		}
 
