@@ -1,12 +1,21 @@
 <?
 
+require_once "JsObject.php";
+
+// TODO instances of the same "Object" share the same prototype instance
+// TODO object properties shadow the prototype ones
+
 class JsFunction {
+
+	public $prototype;
 
 	function __construct($fun){
 		// TODO Check if is function!
 		$this->fun = $fun;
 		$this->arguments = null;
 		$this->defaultThis = $this;
+
+		$this->prototype = new JsObject(array("constructor" => $this));
 	}
 
 	function __invoke(){
@@ -21,7 +30,7 @@ class JsFunction {
 	}
 	
 	function call($newThis){
-		print_r(func_get_args());
+		//print_r(func_get_args());
 		$head = array( is_null($newThis) ? $this->defaultThis : $newThis );
 		//print_r($head);
 		return call_user_func_array($this->fun, ($head + array_slice(func_get_args(), 0)) );
@@ -50,33 +59,26 @@ class JsFunction {
 		return "[JsFunction]";
 	}
 
+	function NewInstance(){
+		// FIXME good try ... but no 
+
+
+		// Create copy of the prototype
+		$r = JsObjectBase::Create($this->prototype);
+
+		// Call constructor in prototype (or function itself, if undef) with $r as this
+		if(isset($this->prototype->constructor) && $this->prototype->constructor == null)
+			$this->call($r, func_get_args());		
+		else
+			$this->prototype->constructor->call($r, func_get_args());
+		
+		// Remove the constructor from the object, its weird
+		unset($r->constructor);
+
+		return $r;
+	}
+
 }
 
-
-$x = new JsFunction(function($self, $a, $b){
-		print "\$self = $self, \$a = $a, \$b = $b\n"; 
-		return $a + $b; 
-	} );
-/*
-print "test 1\n";
-print "Should print \"\$self = [JsFunction], \$a = 1, \$b = 2\", result = 3:\n";
-print $x->call(null, 1, 2) . "\n";
-print "test 2\n";
-print "Should print \"\$self = 2, \$a = 1, \$b = 2\", result = 3:\n";
-print $x->call(2, 1, 2) . "\n";
-
-$y = new JsFunction(function($self, $a){
-	return new JsFunction(
-		function($self, $b) use ($a){
-			return $a + $b;
-		}
-	);
-});*/
-/*
-print "closure test\n";
-print "Should print 3:\n";
-print ($y->call(null, 1)->call(null, 2)) . "\n";
-*/
-print "Sum = " . $x(1, 2) . "\n";
 
 ?>
