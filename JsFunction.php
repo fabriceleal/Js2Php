@@ -2,8 +2,6 @@
 
 require_once "JsObject.php";
 
-// TODO instances of the same "Object" share the same prototype instance
-// TODO object properties shadow the prototype ones
 
 class JsFunction {
 
@@ -60,11 +58,9 @@ class JsFunction {
 	}
 
 	function NewInstance(){
-		// FIXME good try ... but no 
-
 
 		// Create copy of the prototype
-		$r = JsObjectBase::Create($this->prototype);
+		$r = JsObjectBase::CreateWithProto($this->prototype);
 
 		// Call constructor in prototype (or function itself, if undef) with $r as this
 		if(isset($this->prototype->constructor) && $this->prototype->constructor == null)
@@ -72,8 +68,8 @@ class JsFunction {
 		else
 			$this->prototype->constructor->call($r, func_get_args());
 		
-		// Remove the constructor from the object, its weird
-		unset($r->constructor);
+		// Shadow the constructor, its weird
+		$r->constructor = null;
 
 		return $r;
 	}
