@@ -7,6 +7,10 @@ with(require('./anotherjs.js').parser) {
 				if(err) throw err;
 				
 				var tree = parse(data);
+
+				with(require('./preparse.js')){
+					preParse(tree);
+				}
 				
 				with(require('./compiler.js')){
 					var res = compile(tree);

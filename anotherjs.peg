@@ -799,7 +799,8 @@ Finally 	=
 		{ return { tag:"finally", block:b}; }
 
 
-ImportStatement = "import" Name ( "." "*" )? ";"
+ImportStatement = "import" name:Name ( "." "*" )? ";"
+		{ return { tag:"import", value:name }; }
 
 NameTail="." t:IDENTIFIER_NAME
 		{ return t; }

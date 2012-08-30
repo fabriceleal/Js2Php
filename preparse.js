@@ -8,6 +8,12 @@
 
 	var recursiveFind = function(tree, tag, scopeAware){
 		var ret = [];
+		var matchTag;
+		if(tag instanceof Array){
+			matchTag = function(toMatch){ return tag.indexOf(toMatch) > -1; };
+		} else {
+			matchTag = function(toMatch){ return tag === toMatch; };
+		}
 
 		if(scopeAware === undefined) scopeAware = false;
 
@@ -15,14 +21,14 @@
 			//console.log('is_array');			
 			for(var k in tree){
 
-				if(scopeAware && tree[k].tag === 'function_literal') continue;
+				if(scopeAware && tree[k].tag === 'function_literal')
+					continue;
 
 				ret = ret.concat(recursiveFind(tree[k], tag));
 			};			
 		}
 
-		if((tree instanceof Object) && (tree.hasOwnProperty('tag')) && (tree.tag === tag)){
-			//console.log('is ' + tag);
+		if((tree instanceof Object) && (tree.hasOwnProperty('tag')) && matchTag(tree.tag)){
 			ret.push(tree);
 		}
 
@@ -30,18 +36,24 @@
 	};
 	
 	var preParse = function(tree){
-		recursiveFind(tree, 'function_literal').forEach(function(item){
+		recursiveFind(tree, ['functionDecl', 'functionExpr']).forEach(function(item){
+
 			// Assume *all* ids not declared inside as captured
 			var locals = [ 'this' ], captured = [];
 
-			// Add current function's args to locals
-			item.args.forEach(function(arg){
-				locals.push(arg.name);
+			// Add current function's parameters to locals
+			item.pars.value.forEach(function(par){
+				locals.push(par.name);
 			});
 
-			// Parse each function instruction
-			item.body.value.forEach(function(instruction){
+			console.log('* pars = ' + JSON.stringify(locals));
 
+
+			// Parse each function instruction
+			item.body.code.forEach(function(instruction){
+				console.log('** instr: ' + JSON.stringify(instruction));
+
+/*
 				// 1st look for refs. If they are not declared in locals, push to all_refs
 				// TODO Multiple declaration var a = b = c = 1 will break here. FIX the grammar.
 				// FIXME function(a){ return function(b){ return a + b}} breaks here.
@@ -60,12 +72,15 @@
 					});
 
 				}
+*/
+
 			});
 			//console.log(locals);
 			//console.log(captured);
 
 			// Store in function structure
-			item.captured = captured;
+			item.captured = captured;			
+			/**/
 		});
 	};
 
