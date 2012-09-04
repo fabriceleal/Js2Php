@@ -48,10 +48,42 @@
 
 			console.log('* pars = ' + JSON.stringify(locals));
 
+/*
+functionDecl.name
+functionExpr.name
+formalParameterList.value*
+declaration.name
+declarationNoIn.name
+PropertyName
+
+*/
+			var instr_parser = {
+				"varStatement" : function(v){ return v.value; },
+				"expression"   : function(v){ return v.value; },
+				"assignment"	: function(v){ return v.right; },
+
+//				"call"			: function(v){  },
+
+				"declaration"  : function(v){ locals.push(name); }
+			};
 
 			// Parse each function instruction
-			item.body.code.forEach(function(instruction){
+			item.body.code.forEach(function parseElem(instruction){
+				// No instruction = no processing
+				if(!instruction)
+					return;
+
 				console.log('** instr: ' + JSON.stringify(instruction));
+
+				var p = instr_parser[instruction.tag];
+				if(p){
+					var tmp = p(instruction);
+					if(tmp instanceof Array){
+						tmp.forEach(parseElem);
+					} else {
+						parseElem( tmp );
+					}
+				}
 
 /*
 				// 1st look for refs. If they are not declared in locals, push to all_refs
