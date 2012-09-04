@@ -35,11 +35,11 @@ Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionState
 
 
 FunctionDeclaration =
-		"function" WsNlStream id:Identifier "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody ";"? WsNlStream
+		"function" WsNlStream id:VarDecl "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody ";"? WsNlStream
 		{ return { tag:"functionDecl", name:id, pars:pars, body:body}; }
 
 FunctionExpression =
-		"function" WsNlStream id:Identifier? "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody
+		"function" WsNlStream id:VarDecl? "(" WsNlStream pars:FormalParameterList? ")" WsNlStream body:FunctionBody
 		{ return { tag:"functionExpr", name:id, pars:pars, body:body}; }
 
 
@@ -48,11 +48,11 @@ FunctionBody =
 		{ return { tag:"functionBody", code:code}; }
 
 FormalParameterListTail =
-		"," WsNlStream i:Identifier
+		"," WsNlStream i:VarDecl
 		{ return i; }
 
 FormalParameterList =
-		h:Identifier t:FormalParameterListTail*
+		h:VarDecl t:FormalParameterListTail*
 		{ return { tag:"formalParameterList", value:[h].concat(t)}; }
 
 ExpressionStatement =
@@ -61,12 +61,12 @@ ExpressionStatement =
 
 PrimaryExpression = 
 		"this" WsNlStream
-		{ return { tag:"thisRef"}; }
+		{ return { tag:"thisRef" }; }
 	/	FunctionExpression
 	/ 	ObjectLiteral
 	/ 	"(" WsNlStream e:Expression WsNlStream ")" WsNlStream
 		{ return e; }
-	/ 	Identifier
+	/ 	VarRef
 	/ 	ArrayLiteral
 	/ 	Literal
 
@@ -117,6 +117,14 @@ Literal 	=
 Identifier = 	
 		i:IDENTIFIER_NAME WsNlStream
 		{ return { tag:"id", name:i}; }
+
+VarRef = 	
+		i:IDENTIFIER_NAME WsNlStream
+		{ return { tag:"ref", name:i}; }
+
+VarDecl = 	
+		i:IDENTIFIER_NAME WsNlStream
+		{ return { tag:"decl", name:i}; }
 
 ArrayLiteral = 	
 		"[" Elision? "]"
@@ -193,7 +201,9 @@ CallExpressionPart =
 		{ return { tag:"callExpressionPartDot", value:i}; }
 
 Arguments = 
-		"(" WsNlStream a:ArgumentList? ")" WsNlStream
+		"(" WsNlStream ")" WsNlStream
+		{ return { tag:"arguments", value:undefined}; }
+	/	"(" WsNlStream a:ArgumentList? ")" WsNlStream
 		{ return { tag:"arguments", value:a}; }
 
 ArgumentListTail	= 
@@ -702,12 +712,16 @@ VariableDeclarationListNoIn =
 
 // VariableDeclaration*
 VariableDeclaration 	= 	
-		id:Identifier init:Initialiser?
+		id:VarDecl init:Initialiser
 		{ return { tag:"declaration", name:id, init:init}; }
+	/	id:VarDecl
+		{ return { tag:"declaration", name:id, init:undefined}; }
 
 VariableDeclarationNoIn = 
-		id:Identifier init:InitialiserNoIn?
+		id:VarDecl init:InitialiserNoIn
 		{ return { tag:"declarationNoIn", name:id, init:init}; }
+	/	id:VarDecl
+		{ return { tag:"declarationNoIn", name:id, init:undefined}; }
 
 // Initialiser*
 Initialiser 	= 	
@@ -791,7 +805,7 @@ TryStatement 	=
 		{ return { tag:"try", block:b, catchBlock:c, 	finallyBlock:null}; }
 
 Catch 	=
-		"catch" WsNlStream "(" WsNlStream i:Identifier ")" WsNlStream b:Block
+		"catch" WsNlStream "(" WsNlStream i:VarDecl ")" WsNlStream b:Block
 		{ return { tag:"catch", id:i, block:b}; }
 
 Finally 	=
@@ -804,6 +818,7 @@ ImportStatement = "import" name:Name ( "." "*" )? ";"
 
 NameTail="." t:IDENTIFIER_NAME
 		{ return t; }
+
 Name 	= 	h:IDENTIFIER_NAME t:NameTail*
 		{ return { tag:"name", value:[h].concat(t)}; }
 

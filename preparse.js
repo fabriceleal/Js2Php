@@ -35,6 +35,65 @@
 		return ret;
 	};
 	
+
+	var instr_parser = {
+		"ref" : function(locals, captured, v) {
+			if(locals.indexOf(v.name) === -1 && captured.indexOf(v.name) === -1)
+			{
+				captured.push(v.name);
+			}
+			// no return
+		},
+
+		"decl" : function(locals, captured, v) {
+			locals.push(par.name);
+			// no return
+		},
+
+		"varStatement" : function(locals, captured, v) {
+			return v.value.map(function(decl){
+				var varName = decl.name.name;
+
+				if(locals.indexOf(varName) === -1)
+					locals.push(varName);
+
+				return v.init;
+			});
+		},
+		"functionDecl" : function(locals, captured, v) {
+			// if the function has a name, put in locals
+			if(v.name && locals.indexOf(v.name.name) === -1)
+				locals.push(v.name.name);
+			
+			
+		}
+	};
+
+	var preParseBlock = function(tree) {
+		// function body
+	};
+
+	var preParse = function(tree) {
+		// Top level parse
+
+		var locals = [];
+		
+		var parseInst = function(inst){
+			if(inst instanceof Array){
+				inst.forEach(parseInst);
+			} else if (inst) {
+				var f = instr_parser[inst.tag];
+				if(f) {
+					parseInst(f(locals, [], inst))
+				} else {
+					console.warn('Tag ' + inst.tag + ' is not implemented');
+				}
+			}
+		};
+		parseInst(tree);		
+	};
+
+/*
 	var preParse = function(tree){
 		recursiveFind(tree, ['functionDecl', 'functionExpr']).forEach(function(item){
 
@@ -48,30 +107,24 @@
 
 			console.log('* pars = ' + JSON.stringify(locals));
 
-/*
-functionDecl.name
-functionExpr.name
-formalParameterList.value*
-declaration.name
-declarationNoIn.name
-PropertyName
-
-*/
 			var instr_parser = {
-				"varStatement" : function(v){ return v.value; },
-				"expression"   : function(v){ return v.value; },
-				"assignment"	: function(v){ return v.right; },
-
-//				"call"			: function(v){  },
-
-				"declaration"  : function(v){ locals.push(name); }
+				"ref" : function(v) {
+					if(locals.indexOf(v.name) === -1 && captured.indexOf(v.name) === -1)
+					{
+						captured.push(v.name);
+					}
+				},
+				"decl" : function(v) {
+					locals.push(par.name);
+				}				
 			};
 
 			// Parse each function instruction
 			item.body.code.forEach(function parseElem(instruction){
 				// No instruction = no processing
-				if(!instruction)
+				if(instruction == null && instruction == ""){
 					return;
+				}
 
 				console.log('** instr: ' + JSON.stringify(instruction));
 
@@ -84,7 +137,7 @@ PropertyName
 						parseElem( tmp );
 					}
 				}
-
+*/
 /*
 				// 1st look for refs. If they are not declared in locals, push to all_refs
 				// TODO Multiple declaration var a = b = c = 1 will break here. FIX the grammar.
@@ -106,16 +159,15 @@ PropertyName
 				}
 */
 
-			});
+//			});
 			//console.log(locals);
 			//console.log(captured);
 
 			// Store in function structure
-			item.captured = captured;			
-			/**/
+/*			item.captured = captured;			
 		});
 	};
-
+*/
 	exports.preParse = preParse;
 
 })();

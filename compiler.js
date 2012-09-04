@@ -5,8 +5,17 @@
 
 	var compilers = {
 		'id' : function(is_top_level){
+			// the same as 'ref'
 			return function(expr){
 				if(is_top_level === true) console.warn('id does not support is_top_level === true');
+
+				return '$' + expr.name;
+			};
+		},
+		'ref' : function(is_top_level){
+			// the same as 'id'
+			return function(expr){
+				if(is_top_level === true) console.warn('ref does not support is_top_level === true');
 
 				return '$' + expr.name;
 			};
