@@ -7,21 +7,24 @@
 (function(){
 
 	// Use this to add more output / suppress output
+	// TODO put this on node module
 	(function(){
 		var __log = console.log;
 		var __warn = console.warn;
 
 		console.log = function(){
 			var args = Array.prototype.slice.call(arguments, 0);
-			args.unshift("[*] PREPARSE LOG:");
+			args.unshift("[log]PREPARSE:");
 
 			__log.apply(console, args);
 		};
+
 		console.warn = function(){
 			var args = Array.prototype.slice.call(arguments, 0);
-			args.unshift("[*] PREPARSE WARN:");
+			args.unshift("[warn]PREPARSE:");
 			__warn.apply(console, args);
 		};
+
 	})();
 	
 	var initEnv = { locals:{ }, inner:undefined };
@@ -166,6 +169,7 @@
 		f(tree, env, captured);
 	};
 	
+	// The AST parser used by the world
 	exports.preParse = (function(){ return function(tree){ 
 		parser(tree, initEnv, undefined);
 	}})();
