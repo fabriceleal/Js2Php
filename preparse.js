@@ -2,6 +2,10 @@
 	Parse the final abstract syntactic tree,
 	specially >:( for the php compilation.
 	Yeah. Closures need to *know* explicitly about the vars inside.
+
+	TODO Enforce:
+			* do not use undeclared vars
+			* do not redeclare vars with the same name as already captured vars
 */
 
 (function(){
@@ -9,19 +13,20 @@
 	// Use this to add more output / suppress output
 	// TODO put this on node module
 	(function(){
+
 		var __log = console.log;
 		var __warn = console.warn;
 
 		console.log = function(){
 			var args = Array.prototype.slice.call(arguments, 0);
-			args.unshift("[log]PREPARSE:");
+			args.unshift("LOG preparse:");
 
 			__log.apply(console, args);
 		};
 
 		console.warn = function(){
 			var args = Array.prototype.slice.call(arguments, 0);
-			args.unshift("[warn]PREPARSE:");
+			args.unshift("WARN preparse:");
 			__warn.apply(console, args);
 		};
 
@@ -54,10 +59,12 @@
 
 			// If var is not present in local scope, assume its captured
 			if(! env.locals.hasOwnProperty(tree.name)) {
-				//captured.locals[tree.name] = true;
+				console.log('Captured: ' + tree.name);
+				
+				captured.a[0][tree.name] = true;
 			}
 		},
-		'add;expression;return;assignment' : walk,
+		'add;expression;return;assignment;call;arguments' : walk,
 		'functionDecl;functionExpr' : function(tree, env, captured) {  
 
 			// Create a new env, which will contain the function's vars
@@ -91,18 +98,25 @@
 			}
 			
 			// New captured context (...)
-			var newCaptured = { locals:{ }, inner:captured };
-			
+			captured.a.unshift({ });
+
 			// Parse functions body
 			tree.body.code.forEach(function(i) { 
-				parser(i, newEnv, newCaptured); 
+				parser(i, newEnv, captured); 
 			});
 			
+			console.log('Old captured: ' + JSON.stringify(captured.a));
+
+			//captured.locals = newCaptured;
+
 			// * Here we have all the information about the vars captured *
+			captured.a.shift();
 			
 		},
 		'varStatement' : function(tree, env, captured) {
 			var newVars = [];
+
+			//console.log(JSON.stringify(tree));
 			
 			tree.value.forEach(function(decl) {
 				// Search for references in the init expressions
@@ -118,6 +132,7 @@
 				if(typeof v !== "string")
 					throw new Error('Parameter name is not a string!' + JSON.stringify(v))
 
+				console.log('Declared: ' + v);
 				env.locals[v] = true; 
 			});			
 		}
@@ -171,7 +186,7 @@
 	
 	// The AST parser used by the world
 	exports.preParse = (function(){ return function(tree){ 
-		parser(tree, initEnv, undefined);
+		parser(tree, initEnv, { a:[] });
 	}})();
 
 })();

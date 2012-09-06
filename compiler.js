@@ -5,7 +5,7 @@
 
 	var compilers = {
 		'id' : function(is_top_level){
-			// the same as 'ref'
+			// the same as 'ref' and 'decl'
 			return function(expr){
 				if(is_top_level === true) console.warn('id does not support is_top_level === true');
 
@@ -13,13 +13,31 @@
 			};
 		},
 		'ref' : function(is_top_level){
-			// the same as 'id'
+			// the same as 'id' and 'decl'
 			return function(expr){
 				if(is_top_level === true) console.warn('ref does not support is_top_level === true');
 
 				return '$' + expr.name;
 			};
 		},
+		'decl' : function(is_top_level){
+			// the same as 'id' and 'ref'
+			return function(expr){
+				if(is_top_level === true) console.warn('decl does not support is_top_level === true');
+
+				return '$' + expr.name;
+			};
+		},
+
+		'initialiser' : function(is_top_level){
+			return function(expr) {
+				if(is_top_level === true) console.warn('initializer does not support is_top_level === true');
+
+				// No need to add a '='; check 'varStatement'
+				return compile(false)(expr.value);
+			};
+		},
+
 		'varStatement' : function(is_top_level){
 			return function(expr){
 				if(is_top_level === false) console.warn('varStatement does not support is_top_level === false');
@@ -79,6 +97,20 @@
 				
 				return compile(false)(expr.left) + ' ' + expr.op + ' ' + compile(false)(expr.right);
 			};
+		},
+		'return' : function(is_top_level) {
+			return function(expr){
+				if(is_top_level === false) console.warn('return does not support is_top_level === false');
+		
+				return 'return ' + compile(false)(expr.value) + (is_top_level ? ';\n' : ''); 
+			};
+		},
+		'functionExpr' : function(is_top_level) {
+			return function(expr) {
+				if(is_top_level === true) console.warn('functionExpr does not support is_top_level === true');
+				
+				return 'new JsFunction(function($self){ ' + compile(true)(expr.body.code) + ' } )';
+			};
 		}
 	};
 
@@ -104,6 +136,8 @@
 		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsAdd.php'].forEach(function(item){
 			ret += 'require_once "' + item + '";\n';
 		});
+
+		ret += '\n';
 		
 		// Compile code
 		ret += compile(true)(expr);
