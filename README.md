@@ -1,22 +1,23 @@
 # Js2Php
 
-## What is Js2Php?
+### What is Js2Php?
 
 A basic, experimental Javascript to PHP translator.
 
-## What Js2Php is NOT
+### What Js2Php is NOT
 
 A full-node.js-web-app to PHP translator. 
 
-## What you can expect from Js2Php
+### What you can expect from Js2Php
 
 The goal is to translate Javascript modules into PHP. One should be able to use these modules from PHP code.
 
-## What does Js2Php support?
+### What does Js2Php support?
 
 Check the tests results to get a feel of what is to be expected from this project. Remember that this is a "basic, experimental Javascript to PHP translator"!
 
-## Notes on Javascript syntax
+### Notes on Javascript syntax
+***not final***
 
 * Do not embbed comments inside expressions. Avoid stuff like this:
 
