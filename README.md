@@ -1,23 +1,22 @@
-A Javascript (Node.js) to PHP compiler
+# Js2Php
 
-I'm not a PHP (or Javascript, for that matter) expert, so expect lots of missing functionality, bugs, and WTF code. At least for now. :|
+## What is Js2Php?
 
-This will take some time (or halt...) because I can't seem to put a javascript grammar to work ...
+A basic, experimental Javascript to PHP translator.
 
-- Some notes on the PEG file: -
+## What Js2Php is NOT
 
-* Rules in the form:
+A full-node.js-web-app to PHP translator. 
 
-A = 	
-		B operator A
-	/ 	B
+## What you can expect from Js2Php
 
-will be translated to:
+The goal is to translate Javascript modules into PHP. One should be able to use these modules from PHP code.
 
-A = B (operator A)*
+## What does Js2Php support?
 
-... and treated accordingly. 
-This method looked faster than the above in small samples.
+Check the tests results to get a feel of what is to be expected from this project. Remember that this is a "basic, experimental Javascript to PHP translator"!
+
+## Notes on Javascript syntax
 
 * Do not embbed comments inside expressions. Avoid stuff like this:
 
@@ -25,7 +24,7 @@ This method looked faster than the above in small samples.
 	fun_call(1 /* This is illegal syntax for me ...*/, 
 			2 // This too ...
 			);
-```javascript
+```
 
 This is ok though:
 ```javascript
@@ -34,11 +33,11 @@ This is ok though:
 	// This too ...
 
 	fun_call(1, 2);
-```javascript
+```
 
 * Be very strict; some advices:
 ** Always use ";"
-** TODO
+** ...
 
-* Expect missing features and bugs.
+* Expect missing features / bugs. Please report them (use the issues page) or fork and improve ;)
 
