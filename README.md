@@ -37,8 +37,8 @@ This is ok though:
 ```
 
 * Be very strict; some advices:
-** Always use ";"
-** ...
+	* Always use ";"
+	* ...
 
 * Expect missing features / bugs. Please report them (use the issues page) or fork and improve ;)
 
