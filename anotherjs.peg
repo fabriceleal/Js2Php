@@ -65,7 +65,7 @@ PrimaryExpression =
 	/	FunctionExpression
 	/ 	ObjectLiteral
 	/ 	"(" WsNlStream e:Expression WsNlStream ")" WsNlStream
-		{ return e; }
+		{ return { tag:"parenthesis", expression: e }; }
 	/ 	VarRef
 	/ 	ArrayLiteral
 	/ 	Literal
@@ -127,15 +127,54 @@ VarDecl =
 		{ return { tag:"decl", name:i}; }
 
 ArrayLiteral = 	
-		"[" Elision? "]"
-	/ 	"[" ElementList Elision "]" 
-	/ 	"[" ElementList? "]"
+	 	"[" l:ElementList "]"
+		{ return { tag:"array_literal", value:l}; }
+	/ 	"[" WsNlStream "]"
+		{ return { tag:"array_literal", value:[]}; }
+
+ElementListTail=
+		"," WsNlStream e:ElementList WsNlStream
+		{ return e; }
+	
+ElementList=
+		head:AssignmentExpression WsNlStream tail:ElementListTail?
+		{ 
+			if(tail)
+				return [head].concat(tail);
+			else
+				return [head];
+		}
+
+/*
+ArrayLiteral = 	
+	 	"[" l:ElementList "]"
+		{ return { tag:"array_literal", value:l}; }
+	/ 	"[" WsNlStream "]"
+		{ return { tag:"array_literal", value:[]}; }
 
 ElementList = 	
-		Elision? AssignmentExpression ( Elision AssignmentExpression )*
+		h:Elision? e:AssignmentExpression tail:ElementList?
+		{ 
+			var r = [];
+			//console.log('h: ' + JSON.stringify(h));
+			if(h && h.length > 1) {
+				r = new Array(h.length);
+			}
+			r.push(e);
+			if(tail) {
+				r = r.concat(tail);
+			}
+			return r;
+		}
+	/	e:Elision
+		{ 
+			var r = new Array(e.length - 1);
+			return r;
+		}
 
 Elision 	= 	
 		","+
+*/
 
 ObjectLiteral 	= 	"{" WsNlStream ls:PropertyNameAndValueList? "}"
 		{ return { tag:"object", value:ls}; }

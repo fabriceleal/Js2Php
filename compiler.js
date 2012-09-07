@@ -1,8 +1,34 @@
 (function(){
 
-	var auxDispatchToValue = function(is_top_level){ return function(expr){ return expr.value ? compile(is_top_level)(expr.value) : ''; }};
-	var auxJsonStringify = function(is_top_level){ return function(expr){ return JSON.stringify(expr.value);}};
+	var auxDispatchToValue = function(is_top_level){
+			return function(expr){ 
+				return expr.value ? compile(is_top_level)(expr.value) : ''; 
+			};
+		};
+	//--
 
+	var auxJsonStringify = function(is_top_level){
+			return function(expr){
+				return JSON.stringify(expr.value);
+			};
+		};
+	//--
+
+	var binaryLeftOpRight = function(is_top_level){
+			return function(e){
+				return compile(false)(e.left) + ' ' + e.op + ' ' + compile(false)(e.right);
+			};
+		};
+	//--
+
+	var binaryLeftConstRight = function(op){
+			return function(is_top_level){
+				return function(e){ 
+					return compile(false)(e.left) + ' ' + op + ' ' + compile(false)(e.right);
+				};
+			};
+		};
+	//--
 
 	var compilers = {
 		'id' : function(is_top_level){
@@ -119,6 +145,39 @@
 				return compile(false)(expr.head) + expr.value.map(compile(false));
 			};
 		},
+		'parenthesis' : function(is_top_level){
+			return function(expr){
+				return "(" + compile(false)(expr.expression) + ")";
+			};
+		},
+		'and' : binaryLeftOpRight,
+		'or'  : binaryLeftOpRight,
+		'relational' : binaryLeftOpRight,
+		'equality' : binaryLeftOpRight,
+		'mult' : binaryLeftConstRight('*'),
+		'if' : function(is_top_level){
+			return function(expr){
+				var ret = 'if(';
+				ret += compile(false)(expr.condition);
+				ret += ') {\n';
+				
+				//truebr
+				if(expr.truebr) {
+					// (expr.truebr.)block.statementList
+					ret += compile(true)(expr.truebr.value.value); 
+				}
+
+				//falsebr
+				if(expr.falsebr) {
+					ret += '} else {\n';
+					// (expr.falsebr.)block.statementList
+					ret += compile(true)(expr.falsebr.value.value);
+				}
+
+				ret += '}\n';
+				return ret;
+			};
+		},
 		'add' : function(is_top_level){
 			return function(expr){				
 				if(expr.op === '+'){
@@ -192,7 +251,10 @@
 			if($)
 				return $(is_top_level)(expr);
 			else{
-				console.warn('Compilation does not support: ' + expr.tag);
+				if(expr.tag)
+					console.warn('Compilation does not support: ' + expr.tag);
+				else
+					console.warn('No tag! ' + JSON.stringify(expr));
 				return '';
 			}
 		}
