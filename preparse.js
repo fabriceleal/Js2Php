@@ -74,7 +74,8 @@
 				captured.a[captured.a.length - 1][tree.name] = true;
 			}
 		},
-		'add;expression;return;assignment;call;arguments;memberExpr;memberExpressionPartOffset;memberExpressionPartDot;parenthesis' : walk,
+		'add;expression;return;assignment;call;arguments;memberExpr;memberExpressionPartOffset;memberExpressionPartDot;parenthesis;object;array_literal' : walk,
+		'objectSlot' : function(tree, env, captured) { parser(tree.value, env, captured); },
 		'functionDecl;functionExpr' : function(tree, env, captured) {  
 			++nestyness;
 

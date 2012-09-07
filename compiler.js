@@ -194,6 +194,18 @@
 				return 'return ' + compile(false)(expr.value) + (is_top_level ? ';\n' : ''); 
 			};
 		},
+		'array_literal' : function(is_top_level) {
+			return function(expr){
+				if(is_top_level === true) console.warn('array_literal does not support is_top_level === true');
+				
+				var ret = 'new JsObject(array( ';
+				expr.value.forEach(function(e){
+					ret += compile(false)(e);
+				});
+				ret += '))';
+				return ret;
+			};
+		},
 		'object': function(is_top_level) {
 			return function(expr){
 				if(is_top_level === true) console.warn('object does not support is_top_level === true');
