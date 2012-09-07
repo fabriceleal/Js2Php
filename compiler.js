@@ -74,7 +74,13 @@
 				return '$' + expr.left.name + '->setValue(' + compile(false)(expr.right) + ')' + (is_top_level ? ';\n' : '');
 			};
 		},
-		'string_literal': auxJsonStringify,
+		'string_literal': function(is_top_level) {
+			return function(expr){
+				if(is_top_level === true) console.warn('string_literal does not support is_top_level === true');
+				
+				return 'new JsString("' + expr.value + '")';
+			};
+		},
 		'number_literal': function(is_top_level) {
 			return function(expr){
 				if(is_top_level === true) console.warn('number_literal does not support is_top_level === true');
@@ -101,8 +107,15 @@
 				return '->' + expr.value.name;
 			};
 		},
+		'memberExpressionPartOffset' : function(is_top_level){
+			return function(expr){
+
+				return '->get(' + compile(false)(expr.value) + ')';
+			};
+		},
 		'memberExpr': function(is_top_level){
 			return function(expr){
+
 				return compile(false)(expr.head) + expr.value.map(compile(false));
 			};
 		},
@@ -128,7 +141,21 @@
 				
 				var ret = 'new JsObject(array( ';
 				ret += expr.value.
-						map(function(pair){ return compile(false)(pair.key) + ' => ' + compile(false)(pair.value); }).
+						map(function(pair){ 
+							var ret = '';
+							if(typeof pair.key === 'string') {
+								ret = '"' + pair.key + '"';
+							}
+							else if(pair.key instanceof Number) {
+								ret = pair.key;
+							}
+							else {
+								throw new Error('Object with key of type ' + (typeof pair.key) + ' : ' + JSON.stringify(pair.key));
+							}
+
+							ret += ' => ' + compile(false)(pair.value); 
+							return ret;
+						}).
 						join(', ');
 				//--
 				ret += ' ))';

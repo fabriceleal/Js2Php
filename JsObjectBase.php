@@ -36,6 +36,10 @@ class JsObjectBase {
 		Creates a property. Shadows the prototype's property if it exists.
 	*/
 	public function __set($name, $value) {
+		$this->set($name, $value);
+	}
+
+	public function set($name, $value) {
 		$this->store->{$name} = $value;
 	}
 
@@ -45,6 +49,10 @@ class JsObjectBase {
 		Otherwise, return null;
 	*/
 	public function __get($name) {
+		return $this->get($name);
+	}
+
+	public function get($name) {
 		//print "Getting $name\n";
 
 		if(isset($this->store->{$name}))

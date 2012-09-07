@@ -74,10 +74,7 @@
 				captured.a[captured.a.length - 1][tree.name] = true;
 			}
 		},
-		'memberExpr' : function(tree, env, captured) {
-			parser(tree.head, env, captured);
-		},
-		'add;expression;return;assignment;call;arguments' : walk,
+		'add;expression;return;assignment;call;arguments;memberExpr;memberExpressionPartOffset;memberExpressionPartDot' : walk,
 		'functionDecl;functionExpr' : function(tree, env, captured) {  
 			++nestyness;
 

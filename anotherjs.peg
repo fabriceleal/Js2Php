@@ -73,7 +73,7 @@ PrimaryExpression =
 // Literals
 
 DECIMAL_LITERAL = 
-		d:DECIMAL_DIGIT+
+		d:DECIMAL_DIGIT+ WsNlStream
 		{ return { tag:"number_literal", value:new Number(d.join(''))}; }
 
 // I dont care about preserving hex literals. do you?
@@ -158,10 +158,18 @@ PropertyName 	=
 		i:Identifier
 		{ 
 			// HACK
-			return { tag:"string_literal", value: i.name }; 
+			return i.name; 
 		}
-	/ 	STRING_LITERAL
-	/ 	DECIMAL_LITERAL
+	/ 	i:STRING_LITERAL
+		{ 
+			// HACK
+			return i.value;
+		}
+	/ 	i:DECIMAL_LITERAL
+		{ 
+			// HACK
+			return i.value;
+		}
 
 MemberExpression 	= 	
 		head:( FunctionExpression / PrimaryExpression ) value:MemberExpressionPart*
