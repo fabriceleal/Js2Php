@@ -1,9 +1,11 @@
 <?
 
 require_once "JsObject.php";
+require_once "JsVariable.php";
+require_once "JsFunction.php";
 
-$console = new JsObject(array(
-	"log" => function (){
+$console = new JsVariable(new JsObject(array(
+	"log" => new JsFunction(function (){
 		// Get args for function
 		$args = func_get_args();
 
@@ -17,16 +19,16 @@ $console = new JsObject(array(
 			}
 		}
 		print "\n";
-	},
-	"warn" => function (){
+	}),
+	"warn" => new JsFunction(function (){
 		print "console.warn\n";
-	},
-	"assert" => function (){
+	}),
+	"assert" => new JsFunction(function (){
 		print "console.assert\n";
-	},
-	"err" => function (){
+	}),
+	"err" => new JsFunction(function (){
 		print "console.error\n";
-	}
-));
+	})
+)));
 
 ?>

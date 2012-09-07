@@ -3,6 +3,7 @@
 	var auxDispatchToValue = function(is_top_level){ return function(expr){ return expr.value ? compile(is_top_level)(expr.value) : ''; }};
 	var auxJsonStringify = function(is_top_level){ return function(expr){ return JSON.stringify(expr.value);}};
 
+
 	var compilers = {
 		'id' : function(is_top_level){
 			// the same as 'ref' and 'decl'
@@ -13,11 +14,10 @@
 			};
 		},
 		'ref' : function(is_top_level){
-			// the same as 'id' and 'decl'
 			return function(expr){
 				if(is_top_level === true) console.warn('ref does not support is_top_level === true');
 
-				return '$' + expr.name;
+				return '$' + expr.name + '->getValue()';
 			};
 		},
 		'decl' : function(is_top_level){
@@ -48,7 +48,7 @@
 				*/
 
 				var ret = expr.value.map(function(d){
-					return compile(false)(d.name) + ' = ' + (d.init ? compile(false)(d.init) : 'null') + ';\n';
+					return compile(false)(d.name) + ' = new JsVariable(' + (d.init ? compile(false)(d.init) : '') + ');\n';
 				}).join('');
 
 				return ret;
@@ -67,14 +67,31 @@
 		},
 		'assignment': function(is_top_level){
 			return function(expr){
-				return compile(false)(expr.left) + ' ' + expr.operator + ' ' + compile(false)(expr.right) + (is_top_level ? ';\n' : '');
+				if(expr.operator !== '=') throw new Error('operator ' + expr.operator + ' not supported by assignment!');
+				if(expr.left.tag !== 'ref') throw new Error('assignment found a non-ref at the left!');
+
+				// Ugly hack here
+				return '$' + expr.left.name + '->setValue(' + compile(false)(expr.right) + ')' + (is_top_level ? ';\n' : '');
 			};
 		},
 		'string_literal': auxJsonStringify,
-		'number_literal': auxJsonStringify,
+		'number_literal': function(is_top_level) {
+			return function(expr){
+				if(is_top_level === true) console.warn('number_literal does not support is_top_level === true');
+				
+				return 'new JsNumber(' + expr.value + ')';
+			};
+		},
 		'call': function(is_top_level){
 			return function(expr){
-				return compile(false)(expr.head) + '(' + compile(false)(expr.args) + ')' + (is_top_level ? ';\n' : ''); 
+				var a = compile(false)(expr.args);
+				if (a)
+					a = 'null, ' + a;
+				else
+					a = 'null';
+
+				// All calls should be proxied through call. This is because $var->getValue()() is invalid syntax!
+				return compile(false)(expr.head) + '->call(' + a + ')' + (is_top_level ? ';\n' : ''); 
 			}
 		},
 		'memberExpressionPartDot' : function(is_top_level){
@@ -108,8 +125,19 @@
 		'functionExpr' : function(is_top_level) {
 			return function(expr) {
 				if(is_top_level === true) console.warn('functionExpr does not support is_top_level === true');
-				
-				return 'new JsFunction(function($self){ ' + compile(true)(expr.body.code) + ' } )';
+
+				// Parameters
+				var p = expr.pars.value ? expr.pars.value : [];
+				p = p.map(compile(false));
+				p.unshift('$self');
+
+				var ret = 'new JsFunction(function(' + p.join(', ') + ')';
+				if(expr.captured) {
+					ret += ' use (' + expr.captured.map(compile(false)).join(', ') + ') ';
+				}
+				ret += '{\n ' + compile(true)(expr.body.code) + ' } )';
+
+				return ret;
 			};
 		}
 	};
@@ -133,9 +161,11 @@
 		var ret = '<?\n';
 
 		// Add headers
-		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsAdd.php'].forEach(function(item){
-			ret += 'require_once "' + item + '";\n';
-		});
+		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsAdd.php', 
+		'JsVariable.php', 'JsNumber.php', 'JsString.php'].
+				forEach(function(item){
+					ret += 'require_once "' + item + '";\n';
+				});
 
 		ret += '\n';
 		

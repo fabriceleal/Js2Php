@@ -49,23 +49,27 @@
 
 	};
 
+	// Used to clean the captured vars struct
+	var nestyness = -1;
+
 	// The instruction's parsers
 	var inst_parser = {
 		'decl': function(){
 			throw new Error('declared vars should be better handled!');
 		},
 		'ref' : function(tree, env, captured) {
-			console.log('Reference to var ' + tree.name + ', env: ' + JSON.stringify(env, null, 3));
+			//console.log('Reference to var ' + tree.name + ', env: ' + JSON.stringify(env, null, 3));
 
 			// If var is not present in local scope, assume its captured
 			if(! env.locals.hasOwnProperty(tree.name)) {
 				console.log('Captured: ' + tree.name);
 				
-				captured.a[0][tree.name] = true;
+				captured.a[captured.a.length - 1][tree.name] = true;
 			}
 		},
 		'add;expression;return;assignment;call;arguments' : walk,
 		'functionDecl;functionExpr' : function(tree, env, captured) {  
+			++nestyness;
 
 			// Create a new env, which will contain the function's vars
 			var newEnv = { locals:{ }, inner:env };
@@ -98,19 +102,30 @@
 			}
 			
 			// New captured context (...)
-			captured.a.unshift({ });
+			captured.a.push({ });
 
 			// Parse functions body
 			tree.body.code.forEach(function(i) { 
 				parser(i, newEnv, captured); 
 			});
-			
 			console.log('Old captured: ' + JSON.stringify(captured.a));
+			var tmp = captured.a.
+					slice(nestyness).
+					map(function(i){ var r = []; for(var k in i){ r.push(k); } return r; }).
+					reduce(function(t, i){ return t.concat(i) }, []).
+					reduce(function(t, i){ if(t.indexOf(i) === -1) t.push(i); return t;}, []).
+					map(function(i){ return { tag:'decl', name:i}; });
 
+
+			if(tmp && tmp.length > 0) {
+				tree.captured = tmp;
+			}
 			//captured.locals = newCaptured;
-
-			// * Here we have all the information about the vars captured *
-			captured.a.shift();
+			--nestyness;
+			if(nestyness === -1) {
+				toplevel = true;
+				captured.a = [];
+			}
 			
 		},
 		'varStatement' : function(tree, env, captured) {
