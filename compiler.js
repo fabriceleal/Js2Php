@@ -122,6 +122,20 @@
 				return 'return ' + compile(false)(expr.value) + (is_top_level ? ';\n' : ''); 
 			};
 		},
+		'object': function(is_top_level) {
+			return function(expr){
+				if(is_top_level === true) console.warn('object does not support is_top_level === true');
+				
+				var ret = 'new JsObject(array( ';
+				ret += expr.value.
+						map(function(pair){ return compile(false)(pair.key) + ' => ' + compile(false)(pair.value); }).
+						join(', ');
+				//--
+				ret += ' ))';
+
+				return ret;
+			};
+		},
 		'functionExpr' : function(is_top_level) {
 			return function(expr) {
 				if(is_top_level === true) console.warn('functionExpr does not support is_top_level === true');

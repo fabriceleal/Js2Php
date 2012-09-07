@@ -6,6 +6,7 @@
 	TODO Enforce:
 			* do not use undeclared vars
 			* do not redeclare vars with the same name as already captured vars
+			* do not allow redeclare vars
 */
 
 (function(){
@@ -31,8 +32,14 @@
 		};
 
 	})();
-	
-	var initEnv = { locals:{ }, inner:undefined };
+
+	var initEnv = {
+		locals: {
+			// Put here node.js globals
+			'console' : true 
+		}, 
+		inner: undefined 
+	};
 
 	// Generic heavy-weight parser
 	var walk = function(tree, env, captured) {
@@ -66,6 +73,9 @@
 				
 				captured.a[captured.a.length - 1][tree.name] = true;
 			}
+		},
+		'memberExpr' : function(tree, env, captured) {
+			parser(tree.head, env, captured);
 		},
 		'add;expression;return;assignment;call;arguments' : walk,
 		'functionDecl;functionExpr' : function(tree, env, captured) {  

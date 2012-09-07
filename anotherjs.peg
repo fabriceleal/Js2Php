@@ -155,7 +155,11 @@ PropertyNameAndValue 	=
 		{ return { tag:"objectSlot", key:key, value:value}; }
 
 PropertyName 	= 	
-		Identifier
+		i:Identifier
+		{ 
+			// HACK
+			return { tag:"string_literal", value: i.name }; 
+		}
 	/ 	STRING_LITERAL
 	/ 	DECIMAL_LITERAL
 
