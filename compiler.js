@@ -70,7 +70,7 @@
 				*/
 
 				var ret = expr.value.map(function(d){
-					return compile(false)(d.name) + ' = new JsVariable(' + (d.init ? compile(false)(d.init) : '') + ');\n';
+					return compile(false)(d.name) + ' = new JsVariable(' + (d.init ? compile(false)(d.init) : 'null') + ');\n';
 				}).join('');
 
 				return ret;
@@ -100,7 +100,7 @@
 					case '=' : 
 						break;
 					case '+=':
-						newVal = 'add(' + newVal + ', $' + expr.left.name + '->getValue() )'; 
+						newVal = 'JsRtArith::add(' + newVal + ', $' + expr.left.name + '->getValue() )'; 
 						break;
 					default:
 						throw new Error('operator ' + expr.operator + ' not supported by assignment!');
@@ -164,7 +164,6 @@
 		'or'  : binaryLeftOpRight,
 		'relational' : binaryLeftOpRight,
 		'equality' : binaryLeftOpRight,
-		'mult' : binaryLeftConstRight('*'),
 		'if' : function(is_top_level){
 			return function(expr){
 				var ret = 'if(';
@@ -188,11 +187,14 @@
 		},
 		'add' : function(is_top_level){
 			return function(expr){				
-				if(expr.op === '+'){
-					return 'add(' + compile(false)(expr.left) + ', ' + compile(false)(expr.right) + ')';
+				switch(expr.op){
+					case '+':
+						return 'JsRtArith::add(' + compile(false)(expr.left) + ', ' + compile(false)(expr.right) + ')';
+					case '-':
+						return 'JsRtArith::subt(' + compile(false)(expr.left) + ', ' + compile(false)(expr.right) + ')';
+					default:
+						throw new Error('"add" does not support operator ' + expr.op);
 				}
-				
-				return compile(false)(expr.left) + ' ' + expr.op + ' ' + compile(false)(expr.right);
 			};
 		},
 		'return' : function(is_top_level) {
@@ -322,7 +324,7 @@
 		var ret = '<?\n';
 
 		// Add headers
-		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsAdd.php', 
+		['JsObject.php', 'JsConsole.php', 'JsFunction.php', 'JsRtArith.php', 
 		'JsVariable.php', 'JsNumber.php', 'JsString.php'].
 				forEach(function(item){
 					ret += 'require_once "' + item + '";\n';
