@@ -28,13 +28,7 @@ Statement 		=
 		Block / VariableStatement / EmptyStatement / LabelledStatement / 
 		ReturnStatement / SwitchStatement / IfStatement  / 
 		IterationStatement / ContinueStatement / BreakStatement / ImportStatement /
-		WithStatement / ThrowStatement / TryStatement / /* TODO This one should be the last ... test this*/ ExpressionStatement
-
-/*
-Block / VariableStatement / EmptyStatement / LabelledStatement / ExpressionStatement
-					/ 	IfStatement / IterationStatement / ContinueStatement / BreakStatement / ImportStatement
-					/ 	ReturnStatement / WithStatement / SwitchStatement / ThrowStatement / TryStatement
-*/
+		WithStatement / ThrowStatement / TryStatement / ExpressionStatement
 
 
 FunctionDeclaration =
