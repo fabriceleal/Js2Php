@@ -1,5 +1,6 @@
 <?
 
+// TODO
 class JsRtRelational {
 
 	static function InstanceOf() {

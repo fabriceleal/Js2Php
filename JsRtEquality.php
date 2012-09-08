@@ -1,5 +1,6 @@
 <?
 
+// TODO
 class JsRtEquality {
 	static function Equal(){
 
