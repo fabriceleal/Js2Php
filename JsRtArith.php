@@ -36,6 +36,11 @@ class JsRtArith {
 		else
 			return new JsNumber(NAN);
 	}
+
+	// TODO
+	static function mod() {
+
+	}
 }
 
 ?>
