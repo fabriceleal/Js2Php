@@ -8,6 +8,10 @@ class JsNumber extends JsValueType {
 		return "number";
 	}
 
+	static function NewInstance($n) {
+		return new JsNumber($n);
+	}
+
 }
 
 ?>

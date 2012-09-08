@@ -8,6 +8,9 @@ class JsString extends JsValueType {
 		return "string";
 	}
 
+	static function NewInstance($n){
+		return new JsString($n);
+	}
 }
 
 ?>

@@ -114,14 +114,14 @@
 			return function(expr){
 				if(is_top_level === true) console.warn('string_literal does not support is_top_level === true');
 				
-				return 'new JsString("' + expr.value + '")';
+				return 'JsString::NewInstance("' + expr.value + '")';
 			};
 		},
 		'number_literal': function(is_top_level) {
 			return function(expr){
 				if(is_top_level === true) console.warn('number_literal does not support is_top_level === true');
 				
-				return 'new JsNumber(' + expr.value + ')';
+				return 'JsNumber::NewInstance(' + expr.value + ')';
 			};
 		},
 		'call': function(is_top_level){
