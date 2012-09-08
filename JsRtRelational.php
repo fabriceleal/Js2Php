@@ -22,6 +22,10 @@ class JsRtRelational {
 	static function EqualOrLesserThan() {
 
 	}
+
+	static function In(){
+
+	}
 }
 
 ?>
