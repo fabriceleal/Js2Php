@@ -97,9 +97,12 @@ BOOLEAN_LITERAL =
 		{ return { tag:"bool_literal", value:false}; }
 
 NULL_LITERAL = 
-		"null" 	WsNlStream
+		"null" WsNlStream
+		{ return { tag:"null_literal"}; }
+	/	"undefined" WsNlStream
 		{ return { tag:"null_literal"}; }
 
+// TODO
 REGULAR_EXPRESSION_LITERAL	= "blah"
 
 // Identifiers
@@ -696,7 +699,7 @@ Expression 	=
 
 			// merge the head and the tail into a single flatten'ed array
 			var all = [head];
-			tail.forEach(function(a){ all = all.concat(a)});
+			tail.forEach(function(a){ all = all.concat(a); });
 			
 			// Nest tails in the right operand of the add
 			return (function _fold(t){
