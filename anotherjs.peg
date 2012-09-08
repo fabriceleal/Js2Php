@@ -798,14 +798,31 @@ IfStatement 	=
 	/	"if" WsNlStream "(" WsNlStream e:Expression ")" WsNlStream truebr:StatementWsNl
 		{ return { tag:"if", condition:e, truebr:truebr, falsebr:null}; }
 
-// TODO Make this pretty!
 IterationStatement 	= 	
-		"do" WsNlStream StatementWsNl "while" WsNlStream "(" WsNlStream Expression ")" WsNlStream  (";" WsNlStream)? 
-	/ 	"while" WsNlStream "(" WsNlStream Expression ")" WsNlStream StatementWsNl
-	/ 	"for" WsNlStream "(" WsNlStream ExpressionNoIn? ";" WsNlStream Expression? ";" WsNlStream Expression? ")" WsNlStream StatementWsNl
-	/ 	"for" WsNlStream "(" WsNlStream "var" WsNlStream VariableDeclarationList ";" WsNlStream Expression? ";" WsNlStream Expression? ")" WsNlStream StatementWsNl
+		"do" WsNlStream stuf:StatementWsNl "while" WsNlStream "(" WsNlStream condition:Expression ")" WsNlStream  (";" WsNlStream)? 
+		{ 
+			return { tag:"loopDoWhile", stuff:stuff, condition:condition };
+		}
+	/ 	"while" WsNlStream "(" WsNlStream condition:Expression ")" WsNlStream stuff:StatementWsNl
+		{
+			return { tag:"loopWhile", stuff:stuff, condition:condition };
+		}
+	/ 	"for" WsNlStream "(" WsNlStream init:ExpressionNoIn? ";" WsNlStream c:Expression? ";" WsNlStream inc:Expression? ")" WsNlStream stuff:StatementWsNl
+		{
+			return { tag:"loopFor", init:init, condition:condition, inc:inc };
+		}
+	/ 	"for" WsNlStream "(" WsNlStream "var" WsNlStream i:VariableDeclarationList ";" WsNlStream c:Expression? ";" WsNlStream inc:Expression? ")" WsNlStream s:StatementWsNl
+		{
+			return { tag:"loopFor", init:i, condition:c, inc:inc , stuff:s};
+		}
 	/ 	"for" WsNlStream "(" WsNlStream "var" WsNlStream VariableDeclarationNoIn "in" WsNlStream Expression ")" WsNlStream StatementWsNl
+		{
+			return { tag:"loopForEach" };
+		}
 	/ 	"for" WsNlStream "(" WsNlStream LeftHandSideExpressionForIn "in" WsNlStream Expression ")" WsNlStream StatementWsNl
+		{
+			return { tag:"loopForEach" };
+		}
 
 ContinueStatement = 	
 		"continue" WsNlStream id:Identifier? (";" WsNlStream)?
