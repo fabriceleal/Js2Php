@@ -37,9 +37,11 @@ class JsRtArith {
 			return new JsNumber(NAN);
 	}
 
-	// TODO
-	static function mod() {
-
+	static function mod($a = null, $b = null){
+		if($a != null && $b != null && $a->getType() == 'number' && $b->getType() == 'number')
+			return new JsNumber($a->getPhpValue() % $b->getPhpValue());
+		else
+			return new JsNumber(NAN);
 	}
 }
 
