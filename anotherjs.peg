@@ -73,7 +73,7 @@ DECIMAL_LITERAL =
 		d:DECIMAL_DIGIT+ WsNlStream
 		{ return { tag:"number_literal", value:new Number(d.join(''))}; }
 
-// I dont care about preserving hex literals. do you?
+// I dont care about preserving hex literals. Do you? Pf! Just return a number!
 HEX_INTEGER_LITERAL = 
 		"0x" d:HEX_DIGIT+
 		{ return { tag:"number_literal", value:new Number("0x" + d.join(''))}; }
@@ -146,6 +146,12 @@ ElementList=
 		}
 
 /*
+
+TODO Support arrays like this: 
+	[,,,3,4] = [,,,3,4]
+	[1,2,,] = [1,2,]
+	[1,2,,,5] = [1,2,,,5]
+
 ArrayLiteral = 	
 	 	"[" l:ElementList "]"
 		{ return { tag:"array_literal", value:l}; }
