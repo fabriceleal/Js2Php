@@ -1,6 +1,9 @@
 /*
 	From here: http://tomcopeland.blogs.com/EcmaScript.html (in BNF format).
-	Adapted by Fabrice.
+	Adapted by fabriceleal.
+
+	This is not a 100% fool-proof javascript grammar, but it's good enough for the job.
+	Given some strict coding standards, it won't give any troubles.
 */
 
 start				= Program
@@ -681,7 +684,7 @@ AssignmentExpressionNoIn 	=
 		{ return { tag:"assignmentNoIn", left:l, operator:op, right:r}; }
 	/	ConditionalExpressionNoIn
 
-AssignmentOperator 			= 	"*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "&=" / "^=" / "/=" / "="
+AssignmentOperator 			= 	"*=" / "/=" / "%=" / "+=" / "-=" / "<<=" / ">>=" / ">>>=" / "<<<=" / "&=" / "^=" / "/=" / "="
 
 // ...
 Expression 	= 	
