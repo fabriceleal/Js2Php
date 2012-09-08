@@ -83,21 +83,35 @@
 		// Just dispatch to the value ...
 		'expression': auxDispatchToValue,
 		'literal'	: auxDispatchToValue,
-		'arguments' : function(is_top_level){
-			return function(expr){
-				if(expr.value){
+		'arguments' : function(is_top_level) {
+			return function(expr) {
+				if(expr.value) {
 					return expr.value.map(compile(false)).join(', ');
 				}
 				return '';
 			};
 		},
-		'assignment': function(is_top_level){
-			return function(expr){
-				if(expr.operator !== '=') throw new Error('operator ' + expr.operator + ' not supported by assignment!');
-				if(expr.left.tag !== 'ref') throw new Error('assignment found a non-ref at the left!');
+		'assignment': function(is_top_level) {
+			return function(expr) {
+
+				if(['ref', 'memberExpr'].indexOf(expr.left.tag) === -1) {
+					throw new Error('assignment found a invalid tag at the left! ' + JSON.stringify(expr.left));
+				}
+
+				var newVal = compile(false)(expr.right);
+
+				switch(expr.operator) {
+					case '=' : 
+						break;
+					case '+=':
+						newVal = 'add(' + newVal + ', $' + expr.left.name + '->getValue() )'; 
+						break;
+					default:
+						throw new Error('operator ' + expr.operator + ' not supported by assignment!');
+				}
 
 				// Ugly hack here
-				return '$' + expr.left.name + '->setValue(' + compile(false)(expr.right) + ')' + (is_top_level ? ';\n' : '');
+				return '$' + expr.left.name + '->setValue(' + newVal + ')' + (is_top_level ? ';\n' : '');
 			};
 		},
 		'string_literal': function(is_top_level) {
@@ -162,13 +176,13 @@
 				ret += ') {\n';
 				
 				//truebr
-				if(expr.truebr) {
+				if(expr.truebr && expr.truebr.value) {
 					// (expr.truebr.)block.statementList
 					ret += compile(true)(expr.truebr.value.value); 
 				}
 
 				//falsebr
-				if(expr.falsebr) {
+				if(expr.falsebr && expr.falsebr.value) {
 					ret += '} else {\n';
 					// (expr.falsebr.)block.statementList
 					ret += compile(true)(expr.falsebr.value.value);
@@ -211,24 +225,28 @@
 				if(is_top_level === true) console.warn('object does not support is_top_level === true');
 				
 				var ret = 'new JsObject(array( ';
-				ret += expr.value.
-						map(function(pair){ 
-							var ret = '';
-							if(typeof pair.key === 'string') {
-								ret = '"' + pair.key + '"';
-							}
-							else if(pair.key instanceof Number) {
-								ret = pair.key;
-							}
-							else {
-								throw new Error('Object with key of type ' + (typeof pair.key) + ' : ' + JSON.stringify(pair.key));
-							}
+				
+				if(expr.value && typeof expr.value !== 'array')
+				{
+					ret += expr.value.
+							map(function(pair){ 
+								var ret = '';
+								if(typeof pair.key === 'string') {
+									ret = '"' + pair.key + '"';
+								}
+								else if(pair.key instanceof Number) {
+									ret = pair.key;
+								}
+								else {
+									throw new Error('Object with key of type ' + (typeof pair.key) + ' : ' + JSON.stringify(pair.key));
+								}
 
-							ret += ' => ' + compile(false)(pair.value); 
-							return ret;
-						}).
-						join(', ');
-				//--
+								ret += ' => ' + compile(false)(pair.value); 
+								return ret;
+							}).
+							join(', ');
+					//--
+				}
 				ret += ' ))';
 
 				return ret;
@@ -259,6 +277,11 @@
 			if(expr instanceof Array){
 				return expr.map(compile(true)).join('');
 			}
+			if(! expr) {
+				console.warn('expr is undefined!');
+				return '<UNDEFINED EXPR TO COMPILE>';
+			}
+
 			var $ = compilers[expr.tag];
 			if($)
 				return $(is_top_level)(expr);
