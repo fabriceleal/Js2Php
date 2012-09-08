@@ -364,7 +364,7 @@ ShiftExpression 				=
 			})(all);
 		}
 
-ShiftOperator 					= 	">>>" / "<<" / ">>"
+ShiftOperator 					= 	">>>" / "<<<" / "<<" / ">>"
 
 // Relational
 RelationalExpression 		= 	
