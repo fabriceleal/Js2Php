@@ -204,7 +204,7 @@
 
 			if(! tree.tag)
 			{
-				console.warn('will skip elem without tag...'); return;
+				console.warn('will skip elem without tag... ' + JSON.stringify(tree.tag)); return;
 			}
 
 			var f = inst_parser[tree.tag];

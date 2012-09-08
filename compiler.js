@@ -31,14 +31,13 @@
 	//--
 
 	var compilers = {
-		'id' : function(is_top_level){
-			// the same as 'ref' and 'decl'
+		'decl;id' : function(is_top_level){
 			return function(expr){
-				if(is_top_level === true) console.warn('id does not support is_top_level === true');
+				if(is_top_level === true) console.warn('decl/id does not support is_top_level === true');
 
 				return '$' + expr.name;
 			};
-		},
+		},	
 		'ref' : function(is_top_level){
 			return function(expr){
 				if(is_top_level === true) console.warn('ref does not support is_top_level === true');
@@ -46,12 +45,9 @@
 				return '$' + expr.name + '->getValue()';
 			};
 		},
-		'decl' : function(is_top_level){
-			// the same as 'id' and 'ref'
+		'thisRef' : function(is_top_level){
 			return function(expr){
-				if(is_top_level === true) console.warn('decl does not support is_top_level === true');
-
-				return '$' + expr.name;
+				return '$self';
 			};
 		},
 
@@ -177,15 +173,13 @@
 				
 				//truebr
 				if(expr.truebr && expr.truebr.value) {
-					// (expr.truebr.)block.statementList
-					ret += compile(true)(expr.truebr.value.value); 
+					ret += compile(true)(expr.truebr.value); 
 				}
 
 				//falsebr
 				if(expr.falsebr && expr.falsebr.value) {
 					ret += '} else {\n';
-					// (expr.falsebr.)block.statementList
-					ret += compile(true)(expr.falsebr.value.value);
+					ret += compile(true)(expr.falsebr.value);
 				}
 
 				ret += '}\n';
@@ -220,6 +214,14 @@
 				return ret;
 			};
 		},
+		'statementList' : function(is_top_level) {
+			return function(expr) {
+				if(is_top_level === false) console.warn('statementList does not support is_top_level === false');
+	
+				// Just compile the inner value. Callers are responsible for setting '{' '}'
+				return compile(true)(expr.value);
+			}
+		},
 		'object': function(is_top_level) {
 			return function(expr){
 				if(is_top_level === true) console.warn('object does not support is_top_level === true');
@@ -252,7 +254,7 @@
 				return ret;
 			};
 		},
-		'functionExpr' : function(is_top_level) {
+		'functionExpr;functionDecl' : function(is_top_level) {
 			return function(expr) {
 				if(is_top_level === true) console.warn('functionExpr does not support is_top_level === true');
 
@@ -271,6 +273,27 @@
 			};
 		}
 	};
+
+	// To avoid code replication, I used a special notation in the obj's keys,
+	// that is unfolded here. No real processing here.
+	for(var k in compilers) {
+		(function(){
+			var agg = k;
+			var splitted = agg.split(";");
+
+			if(splitted.length > 1) {
+				var obj = compilers[agg];
+
+				splitted.forEach(function(key){
+					//console.log('Defining the getter of "' + key + '" as the same of "' + agg + '"');
+					compilers.__defineGetter__(key, function(){ return obj; });
+				});
+
+				// Now this is garbage ...
+				compilers[agg] = undefined;
+			}
+		})();		
+	}
 
 	var compile = function(is_top_level){
 		return function(expr){
