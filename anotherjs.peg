@@ -183,7 +183,7 @@ Elision 	=
 */
 
 ObjectLiteral 	= 	"{" WsNlStream ls:PropertyNameAndValueList? "}"
-		{ return { tag:"object", value:ls}; }
+		{ return { tag:"object", value:ls }; }
 
 PropertyNameAndValueListTail	=  
 		"," WsNlStream p:PropertyNameAndValue
