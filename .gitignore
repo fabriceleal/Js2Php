@@ -1,5 +1,6 @@
 test*.*
 newjs.js
-anotherjs.js
+grammarjs.js
 *.bak
+*.tmp
 
