@@ -16,6 +16,11 @@ The goal is to translate Javascript modules into PHP. One should be able to use 
 
 Check the tests results to get a feel of what is to be expected from this project. Remember that this is a "basic, experimental Javascript to PHP translator"!
 
+### TODO
+
+* Implement JsRt*.php classes
+* The grammar doesn't return AST for a "for-loop".
+
 ### Notes on Javascript syntax
 ***not final***
 
