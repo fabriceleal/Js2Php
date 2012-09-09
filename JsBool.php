@@ -23,6 +23,10 @@ class JsBool extends JsValueType {
 		if($jsObject instanceof JsBool)
 			return $jsObject;
 
+		// Php bool literals
+		if(false === $jsObject || true === $jsObject)
+			return new JsBool($jsObject);
+
 		// any valid objects return true
 		return new JsBool(true);
 	}

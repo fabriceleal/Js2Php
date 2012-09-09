@@ -2,6 +2,7 @@
 
 require_once "JsObject.php";
 require_once "JsFunction.php";
+require_once "JsBool.php";
 
 // Do not call JsArray->get(0) !!!!!!
 
@@ -114,24 +115,35 @@ class JsArray extends JsObject implements ArrayAccess {
 		} );
 		$this->prototype->map->setThis($this);
 
-		// Filter FIXME Attention to the condition: Js wrapper for bools incoming ...
+		// Filter
 		$this->prototype->filter = new JsFunction( function($self, $fun) {
 			$ret = new JsArray();
 			foreach($self->raw as $idx => $value) {
-				if( $fun->call(null, $value, $idx, $self) ) {
+				if( JsBool::ConvertToJsBool( $fun->call(null, $value, $idx, $self) )->IsTrue() ) {
 					$ret->push->call(null, $value);
 				}
 			}
 			return $ret;
 		} );
 		$this->prototype->filter->setThis($this);
+
+		// Reduce
+		$this->prototype->reduce = new JsFunction( function($self, $fun, $init) {
+			$ret = $init;
+			foreach($self->raw as $idx => $value) {
+				$ret = $fun->call(null, $ret, $value, $idx, $self);
+			}
+			return $ret;
+		} );
+		$this->prototype->reduce->setThis($this);
+
 	}
 
 	function __toString(){
 		return "[JsArray]";
 	}
 
-	function toPhpValue(){
+	function getPhpValue(){
 		return $this->raw;
 /*
 		$ret = array();
