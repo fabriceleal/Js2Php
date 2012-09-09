@@ -3,12 +3,16 @@
 require_once "JsObject.php";
 
 
-class JsFunction {
+class JsFunction extends JsObject {
+
+	private $fun;
+	private $arguments;
+	private $defaultThis;
 
 	public $prototype;
 
 	function __construct($fun){
-		// TODO Check if is function!
+		// TODO Check if it's a function!
 		$this->fun = $fun;
 		$this->arguments = null;
 		$this->defaultThis = $this;

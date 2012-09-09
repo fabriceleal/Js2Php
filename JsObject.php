@@ -35,7 +35,11 @@ require_once "JsObjectBase.php";
 
 class JsObject extends JsObjectBase {
 
+	public $prototype;
+
 	function __construct($members = array()) {
+		parent::__construct();
+
 		foreach ($members as $name => $value) {
 			$this->$name = $value;
 			if($value instanceof JsFunction){

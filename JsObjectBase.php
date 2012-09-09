@@ -1,7 +1,9 @@
 <?
 
 class JsObjectBase {
-	private $prototype;
+	// The prototype will need to be "redefined" in 
+	// every child that needs access to it
+	public $prototype;
 	private $store;
 
 	public function __construct() {
@@ -40,7 +42,9 @@ class JsObjectBase {
 	}
 
 	public function set($name, $value) {
+		//print "Setting $name\n";
 		$this->store->{$name} = $value;
+//		$this->store[$name] = $value;
 	}
 
 	/*
@@ -58,7 +62,13 @@ class JsObjectBase {
 		if(isset($this->store->{$name}))
 			return $this->store->{$name};
 
+//		if(isset($this->store[$name]))
+//			return $this->store[$name];
+
 		//print "Getting $name from prototype\n";
+		//print "Dump (JsObjectBase):\n";
+		//print_r ($this->prototype);
+		//print ".\n";
 
 		if(isset($this->prototype) && isset($this->prototype->{$name}))
 			return $this->prototype->{$name};
