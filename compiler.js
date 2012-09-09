@@ -209,9 +209,7 @@
 				if(is_top_level === true) console.warn('array_literal does not support is_top_level === true');
 				
 				var ret = 'new JsObject(array( ';
-				expr.value.forEach(function(e){
-					ret += compile(false)(e);
-				});
+				ret += expr.value.map(compile(false)).join(', ');
 				ret += '))';
 				return ret;
 			};
