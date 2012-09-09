@@ -61,7 +61,7 @@ class JsFunction extends JsObject {
 		return "[JsFunction]";
 	}
 
-	function NewInstance(){
+	static function NewInstance(){
 
 		// Create copy of the prototype
 		$r = JsObjectBase::CreateWithProto($this->prototype);

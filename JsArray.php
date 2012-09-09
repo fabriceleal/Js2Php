@@ -143,14 +143,12 @@ class JsArray extends JsObject implements ArrayAccess {
 		return "[JsArray]";
 	}
 
+	static function NewInstance($arr){
+		return new JsArray($arr);
+	}
+
 	function getPhpValue(){
 		return $this->raw;
-/*
-		$ret = array();
-		for( $i = 0; $i < $this->length; ++$i) {
-			$ret[$i] = $this->$i;
-		}
-		return $ret;*/
 	}
 }
 

@@ -52,6 +52,10 @@ class JsObject extends JsObjectBase {
 		return "[JsObject]";
 	}
 
+	static function NewInstance($members){
+		return new JsObject($members);
+	}
+
 }
 
 /*
